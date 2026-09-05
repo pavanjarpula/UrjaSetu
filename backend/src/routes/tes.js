@@ -126,7 +126,8 @@ router.get("/sizing", async (req, res) => {
       { upsert: true }
     );
 
-    // Save TES run
+    // Save TES run (delete old stale entry first to avoid duplicate key)
+    await TesRun.deleteMany({ date: new Date(date) });
     tesRun = new TesRun({
       date: new Date(date),
       forecast_used: forecast,
