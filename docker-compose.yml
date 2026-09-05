@@ -1,0 +1,49 @@
+services:
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - MODEL_DIR=/app/models
+      - DATASET_DIR=/app/dataset
+    volumes:
+      - ./models:/app/models:ro
+      - ./dataset:/app/dataset:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      - ML_SERVICE_URL=http://ml-service:8001
+      - CLIENT_URL=http://localhost:3000
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - REACT_APP_API_URL=http://localhost:5000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

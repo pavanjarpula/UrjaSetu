@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment (all .env files anywhere)
+**/.env
+.env.local
+.env.production
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary
+uploads/
+tmp/
+.cache/
+
+# Model artifacts (large files - use DVC or git-lfs)
+models/*.keras
+models/*.pkl
+models/*.ipynb
+models/.ipynb_checkpoints/
+
+# Dataset files (keep for now)
+# dataset/*.xls
+# dataset/*.xlsx
+# dataset/*.csv
+# dataset/*-checkpoint.*
+
+# RAG PDFs (keep for now)
+# documented pdfs for RAG/*.pdf
+# documented pdfs for RAG/*.png
+# documented pdfs for RAG/*.zip
+# tariff data for RAG/
+
+# Generated files
+results.pkl
+rag_eval_results.json
+
+# Utility scripts (one-time use, not core application)
+check_mongo.py
+check_indexes.py
+test_vector_search.py

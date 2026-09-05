@@ -1,0 +1,20 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+xgboost==2.1.0
+tensorflow==2.17.0
+joblib==1.4.2
+pydantic==2.9.0
+python-dotenv==1.0.1
+pymongo==4.8.0
+sentence-transformers==3.1.0
+PyMuPDF==1.24.5
+requests==2.32.3
+# LangGraph for corrective-RAG state machine
+langgraph==0.4.1
+# LangSmith for RAG tracing
+langsmith==0.3.4
+# Tavily for web search fallback
+tavily-python==0.5.0

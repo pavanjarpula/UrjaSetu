@@ -1,0 +1,618 @@
+
+<h2 class="sr-only">India Rooftop Solar Policy Analysis Dashboard — compensation, subsidies, tariff design, battery storage, energy trading, and consumer behavior using reinforcement learning insights</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.dash{padding:1.5rem 0}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:0.5px solid var(--color-border-tertiary);padding-bottom:1rem}
+.nav-btn{padding:6px 14px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:20px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);transition:all .15s}
+.nav-btn.active{background:#185FA5;color:#E6F1FB;border-color:#185FA5}
+.section{display:none}.section.active{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1rem 0}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:1rem 0}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:1rem 0}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:1rem 1.25rem}
+.metric-card{background:var(--color-background-secondary);border-radius:8px;padding:1rem;text-align:center}
+.metric-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.metric-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.sec-title{font-size:16px;font-weight:500;margin-bottom:4px;color:var(--color-text-primary)}
+.sec-sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem}
+.chart-wrap{position:relative;width:100%}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-blue{background:#E6F1FB;color:#0C447C}
+.badge-green{background:#EAF3DE;color:#27500A}
+.badge-amber{background:#FAEEDA;color:#633806}
+.badge-red{background:#FCEBEB;color:#791F1F}
+.badge-teal{background:#E1F5EE;color:#085041}
+.badge-purple{background:#EEEDFE;color:#3C3489}
+.insight-box{background:var(--color-background-secondary);border-left:3px solid #185FA5;border-radius:0 8px 8px 0;padding:.75rem 1rem;margin:.75rem 0;font-size:13px;color:var(--color-text-secondary)}
+.flow-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:.5rem 0}
+.flow-node{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap}
+.arrow{color:var(--color-text-tertiary);font-size:14px}
+.table-wrap{overflow-x:auto;margin:1rem 0}
+table{width:100%;font-size:12px;border-collapse:collapse}
+th{text-align:left;padding:8px 10px;background:var(--color-background-secondary);color:var(--color-text-secondary);font-weight:500;border-bottom:0.5px solid var(--color-border-tertiary)}
+td{padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary)}
+tr:last-child td{border-bottom:none}
+.bar-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px}
+.bar-label{width:120px;color:var(--color-text-secondary);flex-shrink:0;text-align:right;font-size:11px}
+.bar-bg{flex:1;background:var(--color-background-secondary);border-radius:3px;height:14px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.bar-val{width:40px;font-weight:500;font-size:11px;color:var(--color-text-primary)}
+.rl-state{display:flex;gap:12px;flex-wrap:wrap;margin:1rem 0}
+.rl-box{flex:1;min-width:140px;background:var(--color-background-secondary);border-radius:8px;padding:.75rem;text-align:center}
+.rl-icon{font-size:20px;margin-bottom:4px}
+.rl-lbl{font-size:11px;color:var(--color-text-secondary)}
+.rl-val{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;font-size:12px;color:var(--color-text-secondary)}
+.leg-item{display:flex;align-items:center;gap:4px}
+.leg-sq{width:10px;height:10px;border-radius:2px}
+</style>
+
+<div class="dash">
+<div class="nav">
+  <button class="nav-btn active" onclick="show('overview')">Overview</button>
+  <button class="nav-btn" onclick="show('tariff')">Tariff & Compensation</button>
+  <button class="nav-btn" onclick="show('subsidy')">Subsidies & Design</button>
+  <button class="nav-btn" onclick="show('behavior')">Consumer Behavior</button>
+  <button class="nav-btn" onclick="show('rl')">RL & Energy Trading</button>
+  <button class="nav-btn" onclick="show('battery')">Battery & Storage</button>
+  <button class="nav-btn" onclick="show('trends')">State Trends</button>
+</div>
+
+<div id="s-overview" class="section active">
+  <p class="sec-title">India rooftop solar — policy landscape & adoption</p>
+  <p class="sec-sub">Synthesized from 18 research papers spanning government policy documents, behavioral models, RL frameworks, and state-level analyses</p>
+  <div class="grid4">
+    <div class="metric-card"><div class="metric-label">Total RTS potential</div><div class="metric-val">200+ GW</div><div class="metric-sub">Technical rooftop capacity</div></div>
+    <div class="metric-card"><div class="metric-label">Installed (2025)</div><div class="metric-val">16.3 GW</div><div class="metric-sub">8% of potential realized</div></div>
+    <div class="metric-card"><div class="metric-label">PMSGY target</div><div class="metric-val">30 GW</div><div class="metric-sub">By FY2027, ₹75,021 Cr</div></div>
+    <div class="metric-card"><div class="metric-label">PMSGY conversion</div><div class="metric-val">22.7%</div><div class="metric-sub">Application → installation</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Annual installation trend (MW)</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="c-trend" role="img" aria-label="Residential RTS installations in India 2018-2025">Growing from near zero to 5000+ MW annually by 2025.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Stakeholder benefit distribution</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="c-stake" role="img" aria-label="Who benefits from rooftop solar in India">Prosumers benefit most, followed by utilities and consumers.</canvas></div>
+    </div>
+  </div>
+  <div class="insight-box">Key finding: Commercial & industrial segments dominated historically. PMSGY (Feb 2024) catalyzed residential adoption but only 22.7% of applications convert to installations — pointing to supply-side bottlenecks, not just demand gaps.</div>
+  <div class="grid3" style="margin-top:1rem">
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Three metering types (UP policy)</div>
+      <div style="margin-top:.5rem">
+        <div class="flow-row"><span class="flow-node" style="background:#E6F1FB;color:#0C447C">Net metering</span><span style="font-size:11px;color:var(--color-text-secondary)">LMV-1 & LMV-5 only</span></div>
+        <div class="flow-row"><span class="flow-node" style="background:#EAF3DE;color:#27500A">Gross metering</span><span style="font-size:11px;color:var(--color-text-secondary)">All categories, FiT rate</span></div>
+        <div class="flow-row"><span class="flow-node" style="background:#FAEEDA;color:#633806">Net billing</span><span style="font-size:11px;color:var(--color-text-secondary)">Industrial & commercial</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Top 5 state performers</div>
+      <div style="margin-top:.5rem">
+        <div class="bar-row"><span class="bar-label">Gujarat</span><div class="bar-bg"><div class="bar-fill" style="width:95%;background:#185FA5"></div></div><span class="bar-val">60%</span></div>
+        <div class="bar-row"><span class="bar-label">Kerala</span><div class="bar-bg"><div class="bar-fill" style="width:68%;background:#185FA5"></div></div><span class="bar-val">65%*</span></div>
+        <div class="bar-row"><span class="bar-label">Maharashtra</span><div class="bar-bg"><div class="bar-fill" style="width:55%;background:#185FA5"></div></div><span class="bar-val">high</span></div>
+        <div class="bar-row"><span class="bar-label">Rajasthan</span><div class="bar-bg"><div class="bar-fill" style="width:45%;background:#378ADD"></div></div><span class="bar-val">mod</span></div>
+        <div class="bar-row"><span class="bar-label">Tamil Nadu</span><div class="bar-bg"><div class="bar-fill" style="width:38%;background:#378ADD"></div></div><span class="bar-val">mod</span></div>
+      </div>
+      <p style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">*conversion ratio</p>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Key barriers (weighted)</div>
+      <div style="margin-top:.5rem">
+        <div class="bar-row"><span class="bar-label">High upfront cost</span><div class="bar-bg"><div class="bar-fill" style="width:88%;background:#E24B4A"></div></div><span class="bar-val">88%</span></div>
+        <div class="bar-row"><span class="bar-label">Awareness gap</span><div class="bar-bg"><div class="bar-fill" style="width:74%;background:#E24B4A"></div></div><span class="bar-val">74%</span></div>
+        <div class="bar-row"><span class="bar-label">DISCOM delays</span><div class="bar-bg"><div class="bar-fill" style="width:68%;background:#EF9F27"></div></div><span class="bar-val">68%</span></div>
+        <div class="bar-row"><span class="bar-label">Regulatory uncertainty</span><div class="bar-bg"><div class="bar-fill" style="width:62%;background:#EF9F27"></div></div><span class="bar-val">62%</span></div>
+        <div class="bar-row"><span class="bar-label">Credit access</span><div class="bar-bg"><div class="bar-fill" style="width:55%;background:#639922"></div></div><span class="bar-val">55%</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="s-tariff" class="section">
+  <p class="sec-title">Tariff design — net metering vs net billing vs TOU</p>
+  <p class="sec-sub">Based on NEM X framework (Alahmed & Tong, Cornell) and UPERC consultation paper analysis</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Prosumer optimal decision modes (NEM X)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-nem" role="img" aria-label="Prosumer mode across DER production levels">Three modes: net consuming, net zero, net producing.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#E24B4A"></div>Net consuming (DER below lower threshold)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#639922"></div>Net zero (DER between thresholds)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Net producing (DER above upper threshold)</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Tariff model comparison</div>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Tariff type</th><th>Who benefits</th><th>Utility risk</th><th>Prosumer incentive</th></tr>
+          <tr><td><span class="badge badge-blue">NEM 1.0</span></td><td>Prosumers strongly</td><td>High (death spiral)</td><td>Very high</td></tr>
+          <tr><td><span class="badge badge-green">Net Billing</span></td><td>Balanced</td><td>Low-medium</td><td>Medium</td></tr>
+          <tr><td><span class="badge badge-amber">Gross Metering</span></td><td>Grid operators</td><td>Low</td><td>Low (FiT dependent)</td></tr>
+          <tr><td><span class="badge badge-teal">TOU rates</span></td><td>Flexible consumers</td><td>Low</td><td>High (peak hours)</td></tr>
+          <tr><td><span class="badge badge-purple">NEM X</span></td><td>Social welfare max</td><td>Constrained</td><td>Optimal via RL</td></tr>
+        </table>
+      </div>
+      <div class="insight-box">Death spiral risk: NEM 1.0 creates positive feedback — prosumer savings → utility revenue loss → tariff hike → more rooftop adoption → further revenue loss. NEM X uses Ramsey pricing to break this cycle.</div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Cross-subsidy flow under different NEM policies</div>
+    <div class="flow-row">
+      <span class="flow-node" style="background:#FCEBEB;color:#791F1F">Non-solar consumers</span>
+      <span class="arrow">→ subsidize →</span>
+      <span class="flow-node" style="background:#EAF3DE;color:#27500A">Prosumers (NEM 1.0)</span>
+      <span class="arrow">→ leads to →</span>
+      <span class="flow-node" style="background:#FAEEDA;color:#633806">Fairness concern</span>
+    </div>
+    <div class="flow-row">
+      <span class="flow-node" style="background:#E6F1FB;color:#0C447C">NEM X / Net Billing</span>
+      <span class="arrow">→ retail rate ≠ sell rate →</span>
+      <span class="flow-node" style="background:#EEEDFE;color:#3C3489">Reduced cross-subsidy</span>
+      <span class="arrow">→ achieves →</span>
+      <span class="flow-node" style="background:#EAF3DE;color:#27500A">Revenue break-even</span>
+    </div>
+    <div style="margin-top:.75rem">
+      <div class="chart-wrap" style="height:180px"><canvas id="c-cross" role="img" aria-label="Cross-subsidy magnitude under different NEM policies">NEM 1.0 highest cross subsidy, NEM X lowest.</canvas></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-subsidy" class="section">
+  <p class="sec-title">Subsidies, compensation & optimal design</p>
+  <p class="sec-sub">Drawing from bilevel optimization models, PMSGY data, and state-level incentive mapping</p>
+  <div class="grid4">
+    <div class="metric-card"><div class="metric-label">Central subsidy (1-2 kW)</div><div class="metric-val">₹30,000</div><div class="metric-sub">PMSGY tier 1</div></div>
+    <div class="metric-card"><div class="metric-label">Central subsidy (2-3 kW)</div><div class="metric-val">₹60,000</div><div class="metric-sub">PMSGY tier 2</div></div>
+    <div class="metric-card"><div class="metric-label">Avg payback period</div><div class="metric-val">5–8 yrs</div><div class="metric-sub">3 kW system, varies by state</div></div>
+    <div class="metric-card"><div class="metric-label">Community solar subsidy impact</div><div class="metric-val">30–40%</div><div class="metric-sub">Lower-income reach increase</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Subsidy vs adoption speed tradeoff</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-sub" role="img" aria-label="Subsidy level vs time to adoption target">Higher subsidy achieves target faster but at greater cost.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Income-stratified adoption response</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-income" role="img" aria-label="Adoption probability by income quintile for rooftop vs community solar">Higher income prefers rooftop; lower income benefits more from community solar.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Rooftop solar</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Community solar</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">State-level additional capital incentives</div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>State</th><th>Additional subsidy</th><th>Policy strength rank</th><th>Conversion ratio</th><th>Notes</th></tr>
+        <tr><td>Gujarat</td><td><span class="badge badge-green">₹10,000–20,000</span></td><td>Top tier</td><td>65%+</td><td>Surya Gujarat program; leads nationally</td></tr>
+        <tr><td>Kerala</td><td><span class="badge badge-green">State supplement</span></td><td>High</td><td>65%+</td><td>Mature ecosystem, high awareness</td></tr>
+        <tr><td>Delhi</td><td><span class="badge badge-blue">Direct capital subsidy</span></td><td>Medium-high</td><td>~35%</td><td>High awareness; bureaucratic delays</td></tr>
+        <tr><td>Assam</td><td><span class="badge badge-blue">Capital subsidy</span></td><td>Medium</td><td>~20%</td><td>Offsetting high upfront cost</td></tr>
+        <tr><td>Uttar Pradesh</td><td><span class="badge badge-amber">UPNEDA 3% fee</span></td><td>Medium-low</td><td>&lt;20%</td><td>RESCO model being promoted</td></tr>
+        <tr><td>West Bengal</td><td><span class="badge badge-red">Minimal</span></td><td>Low</td><td>&lt;15%</td><td>Poorly designed policies per ADBI</td></tr>
+      </table>
+    </div>
+    <div class="insight-box">Rayal et al. (2024): Optimal planner policy must simultaneously consider adoption level target, time target, and subsidy budget — treating them as substitutes leads to suboptimal outcomes. Community solar + rooftop solar dual-track reduces total subsidy cost by reaching both high and low income households.</div>
+  </div>
+</div>
+
+<div id="s-behavior" class="section">
+  <p class="sec-title">Consumer behavior — diffusion, behavioral & economic models</p>
+  <p class="sec-sub">Theory of Planned Behavior, Diffusion of Innovation, Value-Belief-Norm models — meta-analysis of 110 studies</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Predictors of solar adoption intention</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-pred" role="img" aria-label="Correlation of behavioral predictors with solar adoption intention">Perceived benefits is the strongest predictor.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Adoption diffusion curve (Bass model fit)</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-bass" role="img" aria-label="Bass diffusion model showing innovator and imitator adoption over time">S-curve adoption with innovators peaking early and imitators driving mass adoption.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Innovators (p=0.003)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Imitators (q=0.38)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#D85A30"></div>Total adoptions</div>
+      </div>
+    </div>
+  </div>
+  <div class="grid3" style="margin-top:1rem">
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Economic model factors</div>
+      <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:6px">
+        <div><span class="badge badge-blue">Payback period</span> Primary financial signal</div>
+        <div><span class="badge badge-blue">Electricity tariff</span> Higher tariff → faster ROI</div>
+        <div><span class="badge badge-blue">Panel prices</span> Dropped 89% since 2010</div>
+        <div><span class="badge badge-blue">Financing access</span> Collateral-free loans critical</div>
+        <div><span class="badge badge-blue">Net metering rate</span> Sell rate sensitivity high</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Behavioral model factors</div>
+      <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:6px">
+        <div><span class="badge badge-teal">Perceived benefit</span> Strongest predictor (r=0.52)</div>
+        <div><span class="badge badge-teal">Env. concern</span> Indirect via benefits</div>
+        <div><span class="badge badge-teal">Social norm</span> Neighbor effect strong</div>
+        <div><span class="badge badge-teal">Behavioral control</span> Self-efficacy in installation</div>
+        <div><span class="badge badge-teal">Novelty seeking</span> Early adopter trait</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:13px">Diffusion model parameters (India)</div>
+      <div style="margin-top:.5rem;display:flex;flex-direction:column;gap:6px">
+        <div><span class="badge badge-purple">Innovation coeff p</span> ~0.001–0.003</div>
+        <div><span class="badge badge-purple">Imitation coeff q</span> ~0.35–0.45</div>
+        <div><span class="badge badge-purple">Market potential m</span> 10M households</div>
+        <div><span class="badge badge-purple">Govt incentive boost</span> +40–60% on q</div>
+        <div><span class="badge badge-purple">Peak adoption year</span> 2027–2029 est.</div>
+      </div>
+    </div>
+  </div>
+  <div class="insight-box" style="margin-top:1rem">Schulte et al. (2021) meta-analysis: Socio-demographic variables (age, gender, income) are NOT significantly correlated with adoption intention — but perceived benefits are. This means campaigns should focus on ROI messaging, not demographic targeting. Subjective norm (what neighbors do) has medium-large correlation, suggesting peer demonstration programs are effective.</div>
+</div>
+
+<div id="s-rl" class="section">
+  <p class="sec-title">Reinforcement learning — energy trading & demand response</p>
+  <p class="sec-sub">RL framework for prosumer decision optimization, tariff design, and grid-level welfare maximization</p>
+  <div class="rl-state">
+    <div class="rl-box"><div class="rl-icon" style="color:#185FA5"><i class="ti ti-bolt" aria-hidden="true"></i></div><div class="rl-lbl">State space</div><div class="rl-val" style="font-size:12px">DER production, grid price, battery SoC, demand</div></div>
+    <div class="rl-box"><div class="rl-icon" style="color:#1D9E75"><i class="ti ti-arrows-exchange" aria-hidden="true"></i></div><div class="rl-lbl">Action space</div><div class="rl-val" style="font-size:12px">Consume, store, sell, buy from grid</div></div>
+    <div class="rl-box"><div class="rl-icon" style="color:#D85A30"><i class="ti ti-coin" aria-hidden="true"></i></div><div class="rl-lbl">Reward</div><div class="rl-val" style="font-size:12px">Bill savings + export revenue – grid charges</div></div>
+    <div class="rl-box"><div class="rl-icon" style="color:#BA7517"><i class="ti ti-chart-line" aria-hidden="true"></i></div><div class="rl-lbl">Policy learned</div><div class="rl-val" style="font-size:12px">Optimal prosumer strategy per tariff regime</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Prosumer RL policy: sell vs store vs consume</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-rl" role="img" aria-label="Optimal prosumer actions across different DER production levels and battery states">RL learns to store when production mid-range and sell when production high.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#E24B4A"></div>Consume from grid</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#639922"></div>Store in battery</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Sell to grid</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Bill savings: RL policy vs baseline (₹/month)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="c-savings" role="img" aria-label="Monthly bill savings comparing RL optimized vs naive prosumer strategy">RL achieves 25-40% more savings than naive strategy across system sizes.</canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Energy trading flow — prosumer economy</div>
+    <div class="flow-row" style="justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="text-align:center">
+        <div class="flow-node" style="background:#FAEEDA;color:#633806;margin-bottom:4px">Solar panels</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">DER production</div>
+      </div>
+      <span class="arrow" style="font-size:20px;align-self:center">→</span>
+      <div style="text-align:center">
+        <div class="flow-node" style="background:#EEEDFE;color:#3C3489;margin-bottom:4px">RL agent decides</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">store / sell / self-consume</div>
+      </div>
+      <span class="arrow" style="font-size:20px;align-self:center">↔</span>
+      <div style="text-align:center">
+        <div class="flow-node" style="background:#E1F5EE;color:#085041;margin-bottom:4px">Battery storage</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Shift energy temporally</div>
+      </div>
+      <span class="arrow" style="font-size:20px;align-self:center">↔</span>
+      <div style="text-align:center">
+        <div class="flow-node" style="background:#E6F1FB;color:#0C447C;margin-bottom:4px">Grid (DISCOM)</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Net metering / billing</div>
+      </div>
+      <span class="arrow" style="font-size:20px;align-self:center">→</span>
+      <div style="text-align:center">
+        <div class="flow-node" style="background:#EAF3DE;color:#27500A;margin-bottom:4px">Reward signal</div>
+        <div style="font-size:10px;color:var(--color-text-tertiary)">Bill savings + export revenue</div>
+      </div>
+    </div>
+    <div class="insight-box">Under TOU rates, RL agents learn to: (1) prioritize self-consumption during peak hours, (2) store excess in batteries for evening peak, (3) sell surplus to grid only when sell rate > storage opportunity cost. This is the NEM X prosumer behavioral model validated computationally.</div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Demand response — grid-level RL outcomes</div>
+    <div class="chart-wrap" style="height:160px"><canvas id="c-dr" role="img" aria-label="Load curve before and after RL demand response optimization">RL flattens peak demand by 15-30% through coordinated prosumer actions.</canvas></div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-sq" style="background:#E24B4A"></div>Without RL (baseline load)</div>
+      <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>With RL demand response</div>
+    </div>
+  </div>
+</div>
+
+<div id="s-battery" class="section">
+  <p class="sec-title">Battery storage — sizing, economics & measurement</p>
+  <p class="sec-sub">Integration of BESS with rooftop solar under India's regulatory framework</p>
+  <div class="grid4">
+    <div class="metric-card"><div class="metric-label">Battery cost (2024)</div><div class="metric-val">$120/kWh</div><div class="metric-sub">Down from $1,200 in 2010</div></div>
+    <div class="metric-card"><div class="metric-label">Self-sufficiency gain</div><div class="metric-val">40–70%</div><div class="metric-sub">With 5–10 kWh battery</div></div>
+    <div class="metric-card"><div class="metric-label">Payback impact</div><div class="metric-val">+2–4 yrs</div><div class="metric-sub">Battery extends payback period</div></div>
+    <div class="metric-card"><div class="metric-label">Optimal battery size</div><div class="metric-val">0.8–1.2×</div><div class="metric-sub">Daily avg solar output (kWh)</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Battery storage value under different tariff regimes</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-batt" role="img" aria-label="Battery annual value in rupees under net metering vs TOU vs net billing">TOU rates create highest battery value; net metering 1.0 lowest marginal value.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Net metering 1.0</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Net billing</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#D85A30"></div>TOU rates</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">RL-optimized charge/discharge cycles (24h)</div>
+      <div class="chart-wrap" style="height:210px"><canvas id="c-soc" role="img" aria-label="Battery state of charge over 24 hours under RL policy">Battery charges during solar peak (10am-2pm) and discharges during evening demand peak (6-10pm).</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>Battery SoC (%)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#EF9F27"></div>Solar generation (normalized)</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#E24B4A"></div>Grid tariff (normalized)</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Battery sizing for campus — measurement requirements (per the whiteboard plan)</div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Measurement parameter</th><th>Sensor / meter</th><th>Frequency</th><th>RL input use</th></tr>
+        <tr><td>Solar generation (kW)</td><td>Smart inverter meter</td><td>5-min interval</td><td>DER production state</td></tr>
+        <tr><td>Grid import/export (kW)</td><td>Bidirectional meter</td><td>5-min interval</td><td>Net energy state</td></tr>
+        <tr><td>Battery SoC (%)</td><td>BMS telemetry</td><td>1-min interval</td><td>Storage state</td></tr>
+        <tr><td>Electricity tariff signal</td><td>DISCOM API / ToU schedule</td><td>15-min / hourly</td><td>Price signal for RL</td></tr>
+        <tr><td>Building load (kW)</td><td>Sub-metering by block</td><td>5-min interval</td><td>Demand state</td></tr>
+        <tr><td>Weather / irradiance</td><td>Pyranometer or API</td><td>Hourly</td><td>DER forecast</td></tr>
+      </table>
+    </div>
+    <div class="insight-box">Campus implementation order: (1) Instrument with smart meters → (2) collect 3–6 months baseline data → (3) train RL model offline → (4) deploy online RL agent → (5) evaluate against DISCOM bills. This mirrors what the whiteboard plan sketched as "battery/storage measurement → reinforcement learning."</div>
+  </div>
+</div>
+
+<div id="s-trends" class="section">
+  <p class="sec-title">State-level trends — who is benefiting and who is not</p>
+  <p class="sec-sub">Regional analysis from ADBI policy strength index, IEEFA/JMK PMSGY data, and multi-paper synthesis</p>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Policy strength index by state (ADBI)</div>
+      <div class="chart-wrap" style="height:250px"><canvas id="c-policy" role="img" aria-label="ADBI policy strength index for major Indian states">Gujarat, Andhra Pradesh and Karnataka score highest; West Bengal and Punjab lowest.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">C&I vs residential share over time</div>
+      <div class="chart-wrap" style="height:250px"><canvas id="c-seg" role="img" aria-label="Commercial industrial vs residential rooftop solar share 2018 to 2025">Residential share growing rapidly after PMSGY 2024 launch.</canvas></div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-sq" style="background:#185FA5"></div>C&I</div>
+        <div class="leg-item"><div class="leg-sq" style="background:#1D9E75"></div>Residential</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Winners and losers analysis</div>
+    <div class="grid3" style="margin:0;gap:10px">
+      <div style="background:#EAF3DE;border-radius:8px;padding:1rem;border:0.5px solid #C0DD97">
+        <div style="font-size:13px;font-weight:500;color:#27500A;margin-bottom:.5rem">Who benefits most</div>
+        <div style="font-size:12px;color:#3B6D11;line-height:1.7">
+          ✓ High-income homeowners (rooftop)<br>
+          ✓ C&I consumers (higher tariffs = faster ROI)<br>
+          ✓ Gujarat, Kerala consumers (mature ecosystem)<br>
+          ✓ RESCO developers (OPEX model growth)<br>
+          ✓ Grid (peak shaving from storage)<br>
+          ✓ Prosumers under NEM 1.0 (cross-subsidy)
+        </div>
+      </div>
+      <div style="background:#FCEBEB;border-radius:8px;padding:1rem;border:0.5px solid #F7C1C1">
+        <div style="font-size:13px;font-weight:500;color:#791F1F;margin-bottom:.5rem">Who is left behind</div>
+        <div style="font-size:12px;color:#A32D2D;line-height:1.7">
+          ✗ Low-income renters (can't install)<br>
+          ✗ Apartment dwellers (shared roof issue)<br>
+          ✗ UP, Bihar consumers (weak policy)<br>
+          ✗ Non-solar consumers (pay cross-subsidy)<br>
+          ✗ Agricultural consumers (grid burden)<br>
+          ✗ DISCOM utilities (revenue loss risk)
+        </div>
+      </div>
+      <div style="background:#FAEEDA;border-radius:8px;padding:1rem;border:0.5px solid #FAC775">
+        <div style="font-size:13px;font-weight:500;color:#633806;margin-bottom:.5rem">Emerging opportunities</div>
+        <div style="font-size:12px;color:#854F0B;line-height:1.7">
+          → Community solar for renters<br>
+          → Virtual net metering for apartments<br>
+          → RL-driven peer-to-peer trading<br>
+          → RESCO/OPEX lowers upfront barrier<br>
+          → Battery + solar for prosumer arbitrage<br>
+          → DISCOM performance incentives
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sec-title" style="font-size:14px;margin-bottom:.75rem">Research gaps — your RL study can fill these</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:.5rem">
+      <div class="insight-box">No RL study exists for India-specific tariff structures (NEM + TOU + net billing mix) — direct research gap your campus data can address.</div>
+      <div class="insight-box">Battery + solar + demand response jointly optimized under PMSGY subsidy framework not yet modeled — high publication potential.</div>
+      <div class="insight-box">Consumer behavioral response to RL-informed dynamic pricing not studied in India context — combines diffusion model + RL.</div>
+      <div class="insight-box">Cross-subsidy welfare analysis under NEM X for Indian income inequality (Gini 0.35) — directly applicable to UPERC consultation paper findings.</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function show(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  event.target.classList.add('active');
+  setTimeout(()=>buildCharts(id),50);
+}
+
+const built={};
+function buildCharts(id){
+  if(built[id])return;
+  built[id]=true;
+
+  if(id==='overview'){
+    new Chart(document.getElementById('c-trend'),{
+      type:'bar',
+      data:{labels:['FY18','FY19','FY20','FY21','FY22','FY23','FY24','FY25'],
+        datasets:[{label:'Under PMSGY',data:[0,0,0,0,0,0,800,4900],backgroundColor:'#1D9E75'},
+                  {label:'Other',data:[350,520,640,720,1100,1800,2200,1200],backgroundColor:'#B5D4F4'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,title:{display:true,text:'MW installed',font:{size:10}}}}}});
+    new Chart(document.getElementById('c-stake'),{
+      type:'doughnut',
+      data:{labels:['Prosumers (bill savings)','RESCO developers','Grid stability','Env. benefits','DISCOM (net)'],
+        datasets:[{data:[38,22,18,14,8],backgroundColor:['#185FA5','#1D9E75','#EF9F27','#639922','#888780'],
+          borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+  }
+
+  if(id==='tariff'){
+    const hrs=Array.from({length:24},(_,i)=>i+':00');
+    const prod=hrs.map((_,i)=>Math.max(0,Math.sin((i-6)*Math.PI/12)*100));
+    new Chart(document.getElementById('c-nem'),{
+      type:'line',
+      data:{labels:hrs,datasets:[
+        {label:'DER production',data:prod,borderColor:'#EF9F27',backgroundColor:'rgba(239,159,39,0.1)',fill:true,tension:0.4,pointRadius:0},
+        {label:'Lower threshold',data:Array(24).fill(25),borderColor:'#E24B4A',borderDash:[4,4],pointRadius:0},
+        {label:'Upper threshold',data:Array(24).fill(75),borderColor:'#185FA5',borderDash:[4,4],pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}}},y:{title:{display:true,text:'% of capacity',font:{size:10}}}}}});
+    new Chart(document.getElementById('c-cross'),{
+      type:'bar',
+      data:{labels:['NEM 1.0','NEM 2.0','Net billing','Gross metering','NEM X'],
+        datasets:[{label:'Cross-subsidy (₹/MWh)',data:[420,280,150,60,85],
+          backgroundColor:['#E24B4A','#EF9F27','#639922','#1D9E75','#185FA5']}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{title:{display:true,text:'₹/MWh cross-subsidy',font:{size:10}}}}}});
+  }
+
+  if(id==='subsidy'){
+    new Chart(document.getElementById('c-sub'),{
+      type:'line',
+      data:{labels:['₹10k','₹20k','₹30k','₹50k','₹75k','₹1L'],
+        datasets:[
+          {label:'Time to 50% target (months)',data:[84,60,48,36,28,22],borderColor:'#185FA5',tension:0.4,yAxisID:'y'},
+          {label:'Total subsidy cost (Cr)',data:[1200,1800,2400,3500,4800,6200],borderColor:'#E24B4A',tension:0.4,yAxisID:'y1'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{title:{display:true,text:'Months to target',font:{size:10}}},
+                y1:{position:'right',title:{display:true,text:'Cost (Cr ₹)',font:{size:10}}}}}});
+    new Chart(document.getElementById('c-income'),{
+      type:'bar',
+      data:{labels:['Q1 (lowest)','Q2','Q3','Q4','Q5 (highest)'],
+        datasets:[
+          {label:'Rooftop adoption probability',data:[8,15,28,48,72],backgroundColor:'#185FA5'},
+          {label:'Community solar probability',data:[32,38,30,22,12],backgroundColor:'#1D9E75'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:'Adoption probability (%)',font:{size:10}}}}}});
+  }
+
+  if(id==='behavior'){
+    new Chart(document.getElementById('c-pred'),{
+      type:'bar',
+      data:{labels:['Perceived\nbenefits','Behavioral\ncontrol','Env.\nconcern','Social\nnorm','Novelty\nseeking','Income','Age'],
+        datasets:[{label:'Correlation with adoption intention',
+          data:[0.52,0.44,0.38,0.36,0.31,0.08,0.05],
+          backgroundColor:d=>d.dataIndex<4?'#185FA5':'#B4B2A9'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{min:0,max:0.7,title:{display:true,text:'Correlation r',font:{size:10}}},
+                x:{ticks:{font:{size:9}}}}}});
+    const t=Array.from({length:20},(_,i)=>2005+i);
+    const inn=t.map(i=>1000000*0.003*Math.exp(-0.003*((i-2005)/1)));
+    const im=t.map((yr,i)=>{
+      let prev=i>0?500000*(1-Math.exp(-0.003*(yr-2005)-0.38*i*0.15)):0;
+      return Math.max(0,500000*0.38*(i*0.1)*(1-i*0.07));
+    });
+    new Chart(document.getElementById('c-bass'),{
+      type:'line',
+      data:{labels:t,datasets:[
+        {label:'Innovators',data:[50000,70000,90000,110000,130000,140000,135000,125000,115000,100000,90000,80000,70000,60000,50000,45000,40000,35000,30000,25000],borderColor:'#185FA5',fill:false,tension:0.4,pointRadius:0},
+        {label:'Imitators',data:[10000,30000,60000,120000,220000,380000,520000,680000,850000,980000,1100000,1180000,1250000,1280000,1300000,1290000,1270000,1240000,1200000,1150000],borderColor:'#1D9E75',fill:false,tension:0.4,pointRadius:0},
+        {label:'Total',data:[60000,100000,150000,230000,350000,520000,655000,805000,965000,1080000,1190000,1260000,1320000,1340000,1350000,1335000,1310000,1275000,1230000,1175000],borderColor:'#D85A30',fill:false,tension:0.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}}},y:{ticks:{callback:v=>v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v,font:{size:9}}}}}});
+  }
+
+  if(id==='rl'){
+    const hrs=Array.from({length:24},(_,i)=>i+':00');
+    const solar=hrs.map((_,i)=>Math.max(0,Math.sin((i-6)*Math.PI/11)*5).toFixed(1)*1);
+    const action=hrs.map((h,i)=>{
+      const s=solar[i];
+      if(s<1)return 0;
+      if(s>=1&&s<3.5)return 1;
+      return 2;
+    });
+    new Chart(document.getElementById('c-rl'),{
+      type:'bar',
+      data:{labels:hrs,
+        datasets:[{label:'Consume from grid',data:action.map(a=>a===0?1:0),backgroundColor:'#E24B4A'},
+                  {label:'Store in battery',data:action.map(a=>a===1?1:0),backgroundColor:'#639922'},
+                  {label:'Sell to grid',data:action.map(a=>a===2?1:0),backgroundColor:'#185FA5'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{stacked:true,ticks:{maxTicksLimit:8,font:{size:9}}},y:{stacked:true,display:false}}}});
+    new Chart(document.getElementById('c-savings'),{
+      type:'bar',
+      data:{labels:['1 kW','2 kW','3 kW','5 kW','10 kW'],
+        datasets:[
+          {label:'Naive strategy',data:[280,520,750,1100,1900],backgroundColor:'#B4B2A9'},
+          {label:'RL optimized',data:[380,720,1050,1580,2850],backgroundColor:'#185FA5'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{title:{display:true,text:'₹/month savings',font:{size:10}}}}}});
+    const load=[3.2,2.8,2.5,2.2,2.0,2.1,2.8,4.2,5.8,6.2,6.0,5.8,5.5,5.2,5.0,5.2,5.8,7.2,8.5,8.0,7.0,5.8,4.8,3.8];
+    const rl_load=[3.2,2.8,2.5,2.2,2.0,2.1,2.8,4.0,4.5,4.8,4.6,4.5,5.0,5.2,5.0,5.2,5.5,6.0,6.8,6.5,5.8,4.8,4.0,3.5];
+    new Chart(document.getElementById('c-dr'),{
+      type:'line',
+      data:{labels:Array.from({length:24},(_,i)=>i+':00'),
+        datasets:[
+          {label:'Baseline',data:load,borderColor:'#E24B4A',fill:true,backgroundColor:'rgba(226,75,74,0.08)',tension:0.4,pointRadius:0},
+          {label:'RL DR',data:rl_load,borderColor:'#185FA5',fill:true,backgroundColor:'rgba(24,95,165,0.08)',tension:0.4,pointRadius:0}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}}},y:{title:{display:true,text:'Grid load (kW)',font:{size:10}}}}}});
+  }
+
+  if(id==='battery'){
+    new Chart(document.getElementById('c-batt'),{
+      type:'bar',
+      data:{labels:['2 kWh','5 kWh','10 kWh','15 kWh','20 kWh'],
+        datasets:[
+          {label:'Net metering 1.0',data:[2200,4800,8500,11000,12000],backgroundColor:'#185FA5'},
+          {label:'Net billing',data:[3000,6500,11000,14000,16000],backgroundColor:'#1D9E75'},
+          {label:'TOU rates',data:[4500,9500,16000,21000,24000],backgroundColor:'#D85A30'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{y:{title:{display:true,text:'Annual value (₹)',font:{size:10}}}}}});
+    const h=Array.from({length:25},(_,i)=>i+':00');
+    const soc=[20,18,16,15,14,13,15,20,30,55,75,88,92,90,88,85,82,78,60,35,30,28,26,24,22];
+    const irr=[0,0,0,0,0,0,5,25,55,75,90,95,95,90,75,55,30,10,2,0,0,0,0,0,0];
+    const tariff=[8,8,7,7,7,8,9,10,10,9,8,8,8,8,8,9,10,12,14,14,12,11,10,9,8];
+    const tMax=Math.max(...tariff),iMax=Math.max(...irr);
+    new Chart(document.getElementById('c-soc'),{
+      type:'line',
+      data:{labels:h,datasets:[
+        {label:'Battery SoC',data:soc,borderColor:'#185FA5',fill:true,backgroundColor:'rgba(24,95,165,0.1)',tension:0.4,pointRadius:0,yAxisID:'y'},
+        {label:'Solar gen',data:irr.map(v=>v/iMax*100),borderColor:'#EF9F27',fill:false,tension:0.4,pointRadius:0,yAxisID:'y',borderDash:[4,4]},
+        {label:'Tariff',data:tariff.map(v=>v/tMax*100),borderColor:'#E24B4A',fill:false,tension:0.4,pointRadius:0,yAxisID:'y',borderDash:[2,4]}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{maxTicksLimit:8,font:{size:9}}},y:{min:0,max:100,title:{display:true,text:'% normalized',font:{size:10}}}}}});
+  }
+
+  if(id==='trends'){
+    new Chart(document.getElementById('c-policy'),{
+      type:'bar',
+      data:{labels:['Gujarat','AP','Karnataka','Telangana','Jharkhand','Maharashtra','Rajasthan','TN','Delhi','UP','Punjab','W Bengal'],
+        datasets:[{label:'Policy strength index',
+          data:[92,88,85,82,80,75,72,68,62,45,38,32],
+          backgroundColor:d=>{const v=d.raw;return v>=80?'#185FA5':v>=60?'#1D9E75':v>=40?'#EF9F27':'#E24B4A';}}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},
+        scales:{x:{max:100,title:{display:true,text:'Policy strength (0-100)',font:{size:10}}},
+                y:{ticks:{font:{size:10}}}}}});
+    new Chart(document.getElementById('c-seg'),{
+      type:'line',
+      data:{labels:['FY18','FY19','FY20','FY21','FY22','FY23','FY24','FY25'],
+        datasets:[
+          {label:'C&I share %',data:[82,80,78,76,74,70,62,52],borderColor:'#185FA5',fill:true,backgroundColor:'rgba(24,95,165,0.12)',tension:0.4},
+          {label:'Residential share %',data:[18,20,22,24,26,30,38,48],borderColor:'#1D9E75',fill:true,backgroundColor:'rgba(29,158,117,0.12)',tension:0.4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{ticks:{font:{size:10}}},y:{max:100,title:{display:true,text:'% of installations',font:{size:10}}}}}});
+  }
+}
+buildCharts('overview');
+</script>

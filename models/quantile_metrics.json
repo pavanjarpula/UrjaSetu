@@ -1,0 +1,43 @@
+{
+  "p50_mape": 16.9057,
+  "coverage_80pct": 80.0,
+  "avg_interval_kwh": 6613.0,
+  "monsoon_coverage": 71.31,
+  "features": [
+    "temp_mean",
+    "temp_max",
+    "temp_min",
+    "cloud_cover_mean",
+    "humidity_mean",
+    "ghi_sum",
+    "dni_sum",
+    "diffuse_sum",
+    "precipitation_sum",
+    "month_sin",
+    "month_cos",
+    "doy_sin",
+    "doy_cos",
+    "monsoon_flag",
+    "season_encoded",
+    "day_of_week",
+    "lag_1",
+    "lag_2",
+    "lag_7",
+    "rolling_3d_mean",
+    "rolling_7d_mean",
+    "rolling_7d_std",
+    "ghi_rolling_3d",
+    "cloud_rolling_3d",
+    "gen_trend_3d"
+  ],
+  "annual_averages": {
+    "p10_kwh": 11607.0,
+    "p50_kwh": 15165.0,
+    "p90_kwh": 18220.0
+  },
+  "ice_scheduling": {
+    "conservative_ice_kg": 214984.0,
+    "balanced_ice_kg": 280883.0,
+    "optimistic_ice_kg": 337472.0
+  }
+}

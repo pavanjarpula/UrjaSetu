@@ -1,0 +1,15 @@
+state,pmsgy_conversion_pct,installed_mw_pmsgy,retail_tariff_rs_kwh,total_subsidy_rs,policy_strength_idx,discom_delay_days,awareness_pct
+Gujarat,78.4,1491,5.5,75000,92,18,72
+Kerala,68.5,410,6.2,72000,88,22,68
+Maharashtra,36.7,820,6.8,65000,75,35,58
+Rajasthan,36.2,380,5.2,60000,72,40,50
+Tamil Nadu,21.8,240,6.5,60000,68,45,55
+Andhra Pradesh,2.9,190,5.8,60000,85,55,62
+Karnataka,56.5,310,6.0,65000,83,30,65
+Delhi,54.9,195,7.0,70000,62,28,70
+Uttar Pradesh,14.8,130,4.8,66000,45,75,35
+Madhya Pradesh,15.5,105,5.1,60000,55,60,40
+Telangana,10.1,85,5.6,65000,70,50,55
+Punjab,12.0,65,4.5,60000,38,65,32
+West Bengal,8.0,40,5.0,60000,32,80,28
+Bihar,6.0,25,4.2,60000,28,90,22

@@ -1,0 +1,89 @@
+{
+  "train_2023_2024": {
+    "rmse": 1753.6276709610531,
+    "mae": 1342.5889183964998,
+    "mape": 11.870417682544204,
+    "r2": 0.876280485984236
+  },
+  "test_2025_full": {
+    "rmse": 2486.2936851981467,
+    "mae": 1857.5986200770549,
+    "mape": 16.118192320305354,
+    "r2": 0.7134897109765053
+  },
+  "test_2025_monsoon": {
+    "rmse": 2693.738356143074,
+    "mae": 2159.7438550204915,
+    "mape": 20.704294429840193,
+    "r2": 0.6763026835239347
+  },
+  "persistence_baseline": {
+    "rmse": 3834.2185743723885,
+    "mae": 2717.247208376128,
+    "mape": 23.422805889793814,
+    "r2": 0.3186204385755069
+  },
+  "improvement_over_baseline_pct": 31.19,
+  "best_params": {
+    "n_estimators": 248,
+    "max_depth": 4,
+    "learning_rate": 0.02,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
+    "min_child_weight": 5,
+    "random_state": 42,
+    "tree_method": "hist",
+    "verbosity": 0
+  },
+  "n_features": 25,
+  "features": [
+    "temp_mean",
+    "temp_max",
+    "temp_min",
+    "cloud_cover_mean",
+    "humidity_mean",
+    "ghi_sum",
+    "dni_sum",
+    "diffuse_sum",
+    "precipitation_sum",
+    "month_sin",
+    "month_cos",
+    "doy_sin",
+    "doy_cos",
+    "monsoon_flag",
+    "season_encoded",
+    "day_of_week",
+    "lag_1",
+    "lag_2",
+    "lag_7",
+    "rolling_3d_mean",
+    "rolling_7d_mean",
+    "rolling_7d_std",
+    "ghi_rolling_3d",
+    "cloud_rolling_3d",
+    "gen_trend_3d"
+  ],
+  "monthly_mape_2025": {
+    "Jan": 13.104,
+    "Feb": 18.793,
+    "Mar": 14.514,
+    "Apr": 10.214,
+    "May": 11.685,
+    "Jun": 18.864,
+    "Jul": 28.532,
+    "Aug": 20.743,
+    "Sep": 14.416,
+    "Oct": 19.451,
+    "Nov": 9.566,
+    "Dec": 13.428
+  },
+  "shap_top5": {
+    "ghi_sum": 521588192.0,
+    "temp_max": 198319616.0,
+    "dni_sum": 173210752.0,
+    "lag_1": 108207256.0,
+    "month_cos": 88957128.0
+  }
+}

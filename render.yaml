@@ -1,0 +1,56 @@
+services:
+  # ─── ML Service (Python FastAPI) ───
+  - type: web
+    name: urjasetu-ml-service
+    runtime: python
+    plan: free
+    buildCommand: pip install -r ml-service/requirements.txt
+    startCommand: uvicorn ml-service.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MODEL_DIR
+        value: /opt/render/project/src/models
+      - key: DATASET_DIR
+        value: /opt/render/project/src/dataset
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: urjasetu_database
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
+    healthCheckPath: /health
+
+  # ─── Backend (Node.js Express) ───
+  - type: web
+    name: urjasetu-backend
+    runtime: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB_NAME
+        value: urjasetu_database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: LLM_PROVIDER
+        value: deepseek
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-chat
+      - key: ML_SERVICE_URL
+        fromService:
+          name: urjasetu-ml-service
+          type: web
+          property: host
+      - key: CLIENT_URL
+        value: https://urjasetu.vercel.app
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
