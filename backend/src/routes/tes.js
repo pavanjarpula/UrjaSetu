@@ -15,10 +15,13 @@ router.get("/sizing", async (req, res) => {
       return res.status(400).json({ error: "Date parameter required" });
     }
 
-    // Check DB first
-    let tesRun = await TesRun.findOne({ date: new Date(date) });
-    if (tesRun) {
-      return res.json({ source: "cache", tes: tesRun });
+    // Check DB first (skip if cached result has zero ice — it's from garbage ML data)
+    const { force } = req.query;
+    if (!force) {
+      let tesRun = await TesRun.findOne({ date: new Date(date) });
+      if (tesRun && tesRun.ice_mass_kg > 0 && tesRun.forecast_used?.p50_kwh > 2000) {
+        return res.json({ source: "cache", tes: tesRun });
+      }
     }
 
     // Get from ML service (forecast + TES sizing combined)
