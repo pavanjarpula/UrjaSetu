@@ -68,30 +68,30 @@ class TESOutput(BaseModel):
 
 # Hall configuration (21 halls, 3 tiers)
 HALLS = [
-    # Large halls (5 halls, ~1200 rooms each)
-    {"id": "Ladies Hostel", "tier": "Large", "rooms": 1200},
-    {"id": "Technology Tower", "tier": "Large", "rooms": 1150},
-    {"id": "BC Roy Hall", "tier": "Large", "rooms": 1100},
-    {"id": "GD Birla Hall", "tier": "Large", "rooms": 1050},
-    {"id": "Mehta Family Hall", "tier": "Large", "rooms": 1000},
-    # Medium halls (8 halls, ~400-600 rooms each)
-    {"id": "Jawahar Hall", "tier": "Medium", "rooms": 600},
-    {"id": "Nehru Hall", "tier": "Medium", "rooms": 550},
-    {"id": "Azad Hall", "tier": "Medium", "rooms": 500},
-    {"id": "Rajendra Prasad Hall", "tier": "Medium", "rooms": 480},
-    {"id": "Patel Hall", "tier": "Medium", "rooms": 450},
-    {"id": "Lajpat Rai Hall", "tier": "Medium", "rooms": 420},
-    {"id": "Subhas Hall", "tier": "Medium", "rooms": 400},
-    {"id": "Vidyadhar Hall", "tier": "Medium", "rooms": 380},
-    # Small halls (8 halls, ~150-300 rooms each)
-    {"id": "Sengupto Hall", "tier": "Small", "rooms": 300},
-    {"id": "Madan Mohan Malaviya Hall", "tier": "Small", "rooms": 280},
-    {"id": "Radha Krishnan Hall", "tier": "Small", "rooms": 250},
-    {"id": "Sarojini Naidu Hall", "tier": "Small", "rooms": 220},
-    {"id": "Gangadhar Meher Hall", "tier": "Small", "rooms": 200},
-    {"id": "Bidhan Chandra Roy Hall", "tier": "Small", "rooms": 180},
-    {"id": "Homi Bhabha Hall", "tier": "Small", "rooms": 150},
-    {"id": "Vikram Sarabhai Hall", "tier": "Small", "rooms": 143},
+    # Large halls (5 halls, highest room capacity)
+    {"id": "B R Ambedkar Hall", "tier": "Large", "rooms": 1392},
+    {"id": "Lalbahadur Sastry Hall", "tier": "Large", "rooms": 1300},
+    {"id": "Madan Mohan Malviya Hall", "tier": "Large", "rooms": 1180},
+    {"id": "Patel Hall", "tier": "Large", "rooms": 1050},
+    {"id": "Lala Lajpat Rai Hall", "tier": "Large", "rooms": 900},
+    # Medium halls (8 halls)
+    {"id": "Azad Hall", "tier": "Medium", "rooms": 590},
+    {"id": "JC Bose Hall", "tier": "Medium", "rooms": 520},
+    {"id": "Nehru Hall", "tier": "Medium", "rooms": 490},
+    {"id": "Rajendra Prasad Hall", "tier": "Medium", "rooms": 460},
+    {"id": "Vidyasagar Hall", "tier": "Medium", "rooms": 440},
+    {"id": "Megnad Saha Hall", "tier": "Medium", "rooms": 420},
+    {"id": "BC Roy Hall", "tier": "Medium", "rooms": 400},
+    {"id": "Radha Krishnan Hall", "tier": "Medium", "rooms": 380},
+    # Small halls (8 halls)
+    {"id": "Homi Bhabha Hall", "tier": "Small", "rooms": 330},
+    {"id": "Sir Ashutosh Mukherjee Hall", "tier": "Small", "rooms": 300},
+    {"id": "Gokhale Hall", "tier": "Small", "rooms": 260},
+    {"id": "Sarojini Naidu Hall", "tier": "Small", "rooms": 250},
+    {"id": "Mother Teresa Hall", "tier": "Small", "rooms": 240},
+    {"id": "Zakir Hussain Hall", "tier": "Small", "rooms": 220},
+    {"id": "Rani Laxmibai Hall", "tier": "Small", "rooms": 200},
+    {"id": "Sister Nivedita Hall", "tier": "Small", "rooms": 183},
 ]
 
 TOTAL_ROOMS = sum(h["rooms"] for h in HALLS)  # 8173
