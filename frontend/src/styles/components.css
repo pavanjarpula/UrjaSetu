@@ -472,3 +472,69 @@ img { max-width: 100%; display: block; }
 .mt-6 { margin-top: var(--space-6); }
 .mb-4 { margin-bottom: var(--space-4); }
 .mb-6 { margin-bottom: var(--space-6); }
+
+/* ═══ TOPBAR TIME ═══ */
+.topbar-time {
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 4px 12px; border-radius: var(--radius-md);
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+}
+.topbar-time-value { font-size: 13px; font-weight: var(--weight-semibold); color: var(--text-primary); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.topbar-time-date { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ═══ TOPBAR CHAT BUTTON ═══ */
+.topbar-chat-btn {
+  padding: 6px 14px; border-radius: 8px; background: transparent;
+  border: 1px solid var(--border-default); color: var(--text-secondary);
+  font-size: 13px; display: flex; align-items: center; gap: 6px;
+  transition: all var(--duration-fast);
+}
+.topbar-chat-btn:hover {
+  border-color: var(--color-solar); color: var(--color-solar);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.12);
+}
+
+/* ═══ SIDEBAR BRAND GLOW ═══ */
+.sidebar-brand-icon {
+  animation: brand-glow 3s ease-in-out infinite alternate;
+}
+@keyframes brand-glow {
+  0% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.2); }
+  100% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.4); }
+}
+
+/* ═══ CHAT FAB GLOW ═══ */
+.chat-fab {
+  animation: fab-pulse 2.5s ease-in-out infinite;
+}
+@keyframes fab-pulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 4px 30px rgba(245, 158, 11, 0.4); }
+}
+
+/* ═══ SIDEBAR LINK TRANSITIONS ═══ */
+.sidebar-link-icon svg {
+  transition: transform var(--duration-fast);
+}
+.sidebar-link:hover .sidebar-link-icon svg,
+.sidebar-link.active .sidebar-link-icon svg {
+  transform: scale(1.1);
+}
+
+/* ═══ STATUS DOT ANIMATION ═══ */
+.topbar-status-dot {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--color-green); }
+  50% { opacity: 0.7; box-shadow: 0 0 10px var(--color-green); }
+}
+
+/* ═══ LIVE BADGE GLOW ═══ */
+.sidebar-link-badge {
+  animation: live-glow 2s ease-in-out infinite;
+}
+@keyframes live-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(16, 185, 129, 0.3); }
+  50% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+}

@@ -31,8 +31,16 @@ export default function LoginPage({ onLogin }) {
     <div className="login-wrapper">
       <div className="login-card">
         <div className="login-logo">
-          <h1>⚡ Urjasetu</h1>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, #f59e0b, #f97316)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#ececec" }}>Urjasetu</h1>
+          </div>
           <p>Solar PV + Ice TES Intelligence Platform</p>
+          <p style={{ fontSize: 11, color: "#525252", marginTop: 4 }}>IIT Kharagpur — 5.5 MWp Solar Array</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>

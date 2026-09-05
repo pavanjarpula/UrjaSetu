@@ -1,18 +1,83 @@
-# Urjasetu — Solar Forecasting & Ice TES Orchestration Platform
+# Urjasetu — Solar Forecasting & Ice TES Intelligence Platform
 
-> ML-driven solar generation forecasting with ice-based thermal energy storage sizing for IIT Kharagpur's 5.5 MWp campus solar PV infrastructure.
+> Live weather → ML models → actionable solar generation forecasts with ice-based thermal energy storage sizing for IIT Kharagpur's 5.5 MWp campus solar PV infrastructure.
+
+![React](https://img.shields.io/badge/React-18-black?style=flat-square)
+![Node.js](https://img.shields.io/badge/Node.js-20-green?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square)
+![MongoDB](https://img.shields.io/badge/MongoDB%20Atlas-M0%20Free-47A248?style=flat-square)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=flat-square)
 
 ## Architecture
 
 ```
-React (browser) → Express API (Node.js) → Python ML Microservice (FastAPI)
-                      ↓                        ↓
-                 MongoDB Atlas            Anthropic/Gemini LLM
-                      ↓
-              Open-Meteo Weather API
+┌──────────────────────────────────────────────────────────────────┐
+│  Frontend (React + Recharts)                                     │
+│  Vercel                                                           │
+└──────────────┬───────────────────────────────────────────────────┘
+               │ API calls (proxy / REACT_APP_API_URL)
+               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Backend (Express.js)                        Render              │
+│  JWT Auth · Rate Limiting · Cron Jobs                            │
+│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐        │
+│  │ /api/auth    │  │ /api/forecast│  │ /api/telemetry   │        │
+│  │ /api/chat    │  │ /api/tes     │  │ /api/weather     │        │
+│  └─────────────┘  └──────┬───────┘  └─────────────────┘        │
+└───────────────────────────┼──────────────────────────────────────┘
+                            │ HTTP
+              ┌─────────────┼──────────────┐
+              ▼             ▼              ▼
+   ┌──────────────┐ ┌────────────┐ ┌────────────────┐
+   │ Open-Meteo   │ │ ML Service │ │ MongoDB Atlas  │
+   │ Weather API  │ │ (FastAPI)  │ │ (DB + Vector)  │
+   │ (free, no    │ │ XGBoost +  │ │                │
+   │  API key)    │ │ LSTM + RAG │ │                │
+   └──────────────┘ └────────────┘ └────────────────┘
+                            │
+                     ┌──────┴──────┐
+                     │ DeepSeek    │
+                     │ LLM API     │
+                     └─────────────┘
 ```
 
-**Key principle:** React never calls third-party APIs directly. All external keys live only in the backend environment.
+**Key principle:** React never calls third-party APIs directly. All external keys live only in backend environment variables.
+
+## Features
+
+### 1. Dynamic Solar Generation Forecasting
+- **Live weather injection** — Open-Meteo hourly data feeds directly into both models at prediction time
+- **XGBoost daily** — P10/P50/P90 quantile regression from 25 engineered weather features
+- **LSTM hourly** — 16-hour generation profile (04:00–19:00) from 10 weather variables
+- **Fallback chain** — Weather-based curve estimation when ML service is unavailable
+- **Accuracy tracking** — Trailing MAPE with predicted vs actual comparison
+
+### 2. Ice Thermal Energy Storage (TES) Sizing
+- 5-step thermodynamic chain from the BTP paper
+- Carnot-corrected COP computation
+- Phase-change energy balance with SLR
+- 37.5-minute thermal lag adjustment
+- Waterfall discharge scheduling across 21 named halls of residence
+
+### 3. Live Telemetry Dashboard
+- Real-time chiller plant monitoring (simulated, O4 sensors pending)
+- Ice tank state tracking (charging/crystallization/discharging/melted)
+- 12 instrumentation variables with visual status
+- Simulated data generator for architecture demo
+
+### 4. Corrective RAG Chatbot
+- Full-page ChatGPT-style interface with session sidebar
+- Local embeddings (all-MiniLM-L6-v2, 384-dim)
+- MongoDB Atlas Vector Search
+- DeepSeek LLM for generation + grading
+- Query rewrite on low-relevance retrieval
+- Conversation history in localStorage (max 20 sessions)
+- Citation chips with source attribution
+
+### 5. Solar Policy RL Dashboard
+- Reinforcement learning policy visualization
+- Daily summary with LLM-generated insights
+- Tariff analysis (Grid import ₹8.5/kWh, Solar export ₹4.2/kWh)
 
 ## Quick Start
 
@@ -20,30 +85,38 @@ React (browser) → Express API (Node.js) → Python ML Microservice (FastAPI)
 - Node.js 20+
 - Python 3.11+
 - MongoDB Atlas account (free tier)
-- Gemini API key
 
 ### 1. Clone and install
 
 ```bash
+git clone https://github.com/pavanjarpula/UrjaSetu.git
+cd UrjaSetu
+
 # Backend
 cd backend && npm install
 
 # Frontend
-cd frontend && npm install
+cd ../frontend && npm install
 
 # ML Service
-cd ml-service && pip install -r requirements.txt
+cd ../ml-service && pip install -r requirements.txt
 ```
 
 ### 2. Configure environment
 
 ```bash
 cp backend/.env.example backend/.env
-# Edit backend/.env with your:
-# - MONGO_URI (from MongoDB Atlas)
-# - GEMINI_API_KEY
-# - JWT_SECRET (run: openssl rand -hex 32)
+# Edit backend/.env with your credentials
 ```
+
+Required environment variables:
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB Atlas connection string |
+| `JWT_SECRET` | Random hex string (`openssl rand -hex 32`) |
+| `DEEPSEEK_API_KEY` | DeepSeek LLM API key |
+| `TAVILY_API_KEY` | Tavily web search API key |
+| `ML_SERVICE_URL` | `http://localhost:8001` for local dev |
 
 ### 3. Run locally
 
@@ -52,87 +125,66 @@ cp backend/.env.example backend/.env
 cd ml-service && python -m uvicorn app.main:app --reload --port 8001
 
 # Terminal 2: Backend
-cd backend && npm run dev
+cd backend && node server.js
 
 # Terminal 3: Frontend
 cd frontend && npm start
 ```
 
-### 4. Or use Docker Compose
-
-```bash
-docker compose up --build
-```
-
-Frontend: http://localhost:3000  
-Backend API: http://localhost:5000  
+Frontend: http://localhost:3000
+Backend API: http://localhost:5000
 ML Service: http://localhost:8001
 
 ## Project Structure
 
 ```
 urjasetu/
-├── ml-service/           # Python FastAPI microservice
+├── ml-service/                # Python FastAPI microservice
 │   ├── app/
-│   │   ├── main.py       # Model loading + prediction endpoints
-│   │   ├── tes_engine.py # Ice TES sizing computation
-│   │   ├── weather_adapter.py  # Open-Meteo field mapping
-│   │   ├── llm_provider.py     # Gemini LLM for RAG
-│   │   ├── ingest_documents.py # PDF chunking + embedding
-│   │   └── eval_set.py   # RAG evaluation questions
+│   │   ├── main.py            # XGBoost + LSTM + embeddings
+│   │   ├── tes_engine.py      # Ice TES sizing (21 halls)
+│   │   ├── weather_adapter.py # Open-Meteo → training features
+│   │   └── llm_provider.py    # DeepSeek LLM for RAG
 │   └── requirements.txt
-├── backend/              # Express.js API
-│   ├── server.js         # Entry point + cron jobs
+├── backend/                   # Express.js API
+│   ├── server.js              # Entry point + cron jobs
 │   ├── src/
-│   │   ├── models/       # Mongoose schemas
-│   │   ├── routes/       # API endpoints
-│   │   ├── middleware/    # Auth, validation
-│   │   └── services/     # LLM provider, utilities
-│   └── .env.example
-├── frontend/             # React + Recharts
+│   │   ├── models/            # Mongoose schemas (8 models)
+│   │   ├── routes/            # 6 route files, 18+ endpoints
+│   │   ├── middleware/         # JWT auth, rate limiting
+│   │   └── services/          # LLM provider abstraction
+│   └── .env
+├── frontend/                  # React + Recharts + Chart.js
 │   ├── src/
-│   │   ├── pages/        # Dashboard pages
-│   │   ├── components/   # Chat widget, etc.
-│   │   └── api/          # API client
-│   └── public/
-├── models/               # Trained model artifacts
-├── dataset/              # Training datasets
-├── docker-compose.yml
-├── Dockerfile.ml
-├── Dockerfile.backend
-├── Dockerfile.frontend
-└── DOCUMENT_MANIFEST.md  # RAG corpus sourcing
+│   │   ├── pages/             # 4 dashboard pages
+│   │   ├── components/        # WeatherPanel, ChatWidget, etc.
+│   │   ├── api/               # API client with JWT
+│   │   └── styles/            # Design tokens + components
+│   └── package.json
+├── models/                    # Trained XGBoost + LSTM artifacts
+├── dataset/                   # Training datasets
+└── DOCUMENT_MANIFEST.md       # RAG corpus sourcing
 ```
 
-## Features
+## API Endpoints
 
-### 1. Solar Generation Forecasting
-- **Daily P10/P50/P90** quantile regression (XGBoost)
-- **Hourly 16-hour** generation profile (LSTM seq2seq)
-- Live Open-Meteo weather integration with explicit field mapping
-- Trailing MAPE/MAE accuracy tracking
-
-### 2. Ice TES Sizing Engine
-- 5-step thermodynamic chain from the BTP paper
-- Carnot-corrected COP computation
-- Phase-change energy balance with SLR
-- 37.5-minute thermal lag adjustment
-- Waterfall discharge scheduling across 21 halls
-
-### 3. Telemetry (Simulated)
-- Full schema for future sensor integration
-- Simulated data generator for architecture demo
-- Persistent "SIMULATED DATA" banner on all charts
-- Ready for real sensor POST ingestion
-
-### 4. Corrective RAG Chatbot
-- PDF ingestion with section-aware chunking
-- Local embeddings (all-MiniLM-L6-v2)
-- MongoDB Atlas Vector Search
-- Gemini LLM for generation + grading
-- Query rewrite on low-relevance retrieval
-- Citation chips with source attribution
-- 15-question evaluation set
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/auth/login` | No | Login, get JWT |
+| POST | `/api/auth/register` | No | Register user |
+| GET | `/api/auth/me` | Yes | Get current user |
+| GET | `/api/forecast/dynamic?date=` | Yes | **Live weather → XGBoost + LSTM** |
+| GET | `/api/forecast/daily?date=` | No | Daily P10/P50/P90 |
+| GET | `/api/forecast/hourly?date=` | No | Hourly LSTM profile |
+| GET | `/api/forecast/accuracy?days=` | Yes | Trailing MAPE |
+| GET | `/api/forecast/daily-summary?date=` | Yes | LLM-generated summary |
+| GET | `/api/weather?date=` | Yes | Raw Open-Meteo data |
+| GET | `/api/tes/sizing?date=` | Yes | TES sizing result |
+| GET | `/api/tes/recent?days=` | Yes | Coverage trend |
+| POST | `/api/telemetry/simulate` | Yes | Generate sim data |
+| GET | `/api/telemetry/latest` | No | Latest readings |
+| POST | `/api/chat` | Yes | RAG chat query |
+| GET | `/api/documents` | Yes | List RAG documents |
 
 ## Open-Meteo Field Mapping
 
@@ -146,50 +198,47 @@ urjasetu/
 | `shortwave_radiation` | `shortwave_radiation` |
 | `diffuse_radiation` | `diffuse_radiation` |
 
-## API Endpoints
+## Halls of Residence
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/auth/login` | Login, get JWT |
-| POST | `/api/auth/register` | Register user |
-| GET | `/api/forecast/daily?date=YYYY-MM-DD` | Daily forecast |
-| GET | `/api/forecast/hourly?date=YYYY-MM-DD` | Hourly forecast |
-| GET | `/api/forecast/accuracy?days=14` | Trailing accuracy |
-| GET | `/api/tes/sizing?date=YYYY-MM-DD` | TES sizing result |
-| GET | `/api/tes/recent?days=30` | Coverage trend |
-| GET | `/api/telemetry/latest` | Latest readings |
-| POST | `/api/telemetry/simulate` | Generate sim data |
-| POST | `/api/chat` | RAG chat query |
-| GET | `/api/documents` | List documents |
+21 halls with tier-based ice allocation:
 
-## Known Limitations
-
-1. **Telemetry is simulated** — O4 sensor hardware is not yet deployed. All telemetry values are generated synthetically with `source: "simulated"`. The `POST /api/telemetry/ingest` endpoint is ready for real sensor data.
-
-2. **LLM provider defaults to free tier** — The RAG chatbot uses Google Gemini (free tier). To swap to another provider, change `LLM_PROVIDER` in `.env` and update the `llmProvider.js` service.
-
-3. **Vector search fallback** — Without Atlas Search index configured, the RAG system falls back to MongoDB text search. For production vector search, create the index per the architecture plan.
-
-4. **Cold start** — Free-tier backends (Render/Railway) may take 10-30 seconds to wake up after inactivity.
+| Tier | Halls | Rooms |
+|------|-------|-------|
+| **Large** | Ladies Hostel, Technology Tower, BC Roy, GD Birla, Mehta Family | 5,500 |
+| **Medium** | Jawahar, Nehru, Azad, Rajendra Prasad, Patel, Lajpat Rai, Subhas, Vidyadhar | 3,380 |
+| **Small** | Sengupto, MM Malaviya, Radha Krishnan, Sarojini Naidu, Gangadhar Meher, BC Roy, Homi Bhabha, Vikram Sarabhai | 1,493 |
 
 ## Deployment
 
-### Frontend (Vercel)
+### Frontend → Vercel
+
 ```bash
 cd frontend
 npm run build
-vercel deploy
+vercel deploy --prod
 ```
 
-### Backend + ML Service (Render/Railway)
-1. Connect GitHub repo
-2. Set environment variables in dashboard
-3. Deploy using `docker-compose.yml`
+Set environment variable:
+- `REACT_APP_API_URL` = Your Render backend URL
 
-### Database (MongoDB Atlas)
+### Backend + ML Service → Render
+
+1. Connect GitHub repo to Render
+2. Create a **Web Service** for backend:
+   - Build command: `cd backend && npm install`
+   - Start command: `cd backend && node server.js`
+   - Environment: Node 20
+3. Create a **Web Service** for ML service:
+   - Build command: `cd ml-service && pip install -r requirements.txt`
+   - Start command: `cd ml-service && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Environment: Python 3.11
+4. Set all environment variables in Render dashboard
+
+### Database → MongoDB Atlas
+
 1. Create free M0 cluster
-2. Add database user
-3. Whitelist IP (or 0.0.0.0/0 for dev)
+2. Create database user
+3. Whitelist IP `0.0.0.0/0` (for Render)
 4. Copy connection string to `MONGO_URI`
 
 ## Cost Estimate
@@ -197,12 +246,13 @@ vercel deploy
 | Service | Monthly Cost |
 |---------|-------------|
 | MongoDB Atlas M0 | $0 |
-| Gemini API (free tier) | $0 |
-| Open-Meteo API | $0 |
+| DeepSeek API | ~$1-3 |
+| Open-Meteo API | $0 (free) |
 | Local embeddings | $0 |
 | Vercel (frontend) | $0 |
 | Render (backend) | $0-7 |
-| **Total** | **$0-7/month** |
+| Render (ML service) | $0-7 |
+| **Total** | **$1-17/month** |
 
 ## License
 
