@@ -22,7 +22,13 @@ const ML_SERVICE = process.env.ML_SERVICE_URL || "http://localhost:8001";
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000" }));
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "https://frontend-hogwarts1.vercel.app",
+  "https://frontend-git-main-hogwarts1.vercel.app",
+  "http://localhost:3000",
+].filter(Boolean);
+app.use(cors({ origin: (origin, cb) => { if (!origin || allowedOrigins.includes(origin)) cb(null, true); else cb(new Error("Not allowed by CORS")); }, credentials: true }));
 app.use(morgan("combined"));
 app.use(express.json({ limit: "10mb" }));
 
