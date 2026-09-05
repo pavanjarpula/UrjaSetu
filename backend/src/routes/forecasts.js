@@ -128,75 +128,67 @@ router.post("/backfill", auth, async (req, res) => {
   }
 });
 
-// Daily summary: LLM-generated synthesis of forecast + TES + tariff
+// Daily summary: LLM-generated synthesis of forecast + weather + tariff
 router.get("/daily-summary", auth, async (req, res) => {
   try {
     const { date } = req.query;
     const { generateAnswer } = require("../services/llmProvider");
 
     // Fetch forecast
-    let forecast = await ForecastDaily.findOne({ date: new Date(date) });
-    if (!forecast) {
-      try {
-        const response = await axios.get(`${ML_SERVICE}/forecast/daily`, {
-          params: { date },
-          timeout: 30000,
-        });
-        forecast = {
-          date: new Date(date),
-          p10_kwh: response.data.forecast.p10_kwh,
-          p50_kwh: response.data.forecast.p50_kwh,
-          p90_kwh: response.data.forecast.p90_kwh,
-        };
-      } catch (e) {
-        return res.status(500).json({ error: "Failed to fetch forecast" });
-      }
-    }
-
-    // Fetch TES sizing
-    let tes = null;
+    let forecast = null;
     try {
-      const tesResponse = await axios.get(`${ML_SERVICE}/tes/sizing/for-date`, {
-        params: { date },
-        timeout: 30000,
-      });
-      tes = tesResponse.data.tes;
-    } catch (e) {
-      // TES may not be available
-    }
+      let cached = await ForecastDaily.findOne({ date: new Date(date) });
+      if (cached) {
+        forecast = { p10_kwh: cached.p10_kwh, p50_kwh: cached.p50_kwh, p90_kwh: cached.p90_kwh };
+      } else {
+        const response = await axios.get(`${ML_SERVICE}/forecast/daily`, { params: { date }, timeout: 30000 });
+        forecast = response.data.forecast;
+      }
+    } catch (e) { /* forecast unavailable */ }
 
-    // Build context for LLM
+    // Fetch weather
+    let weather = null;
+    try {
+      const d = new Date(date);
+      const start = d.toISOString().split("T")[0];
+      const weatherRes = await axios.get("https://api.open-meteo.com/v1/forecast", {
+        params: {
+          latitude: 22.3149, longitude: 87.3105,
+          hourly: "temperature_2m,relative_humidity_2m,cloud_cover,precipitation,wind_speed_10m,shortwave_radiation",
+          daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,shortwave_radiation_sum,uv_index_max",
+          timezone: "Asia/Kolkata", start_date: start, end_date: start,
+        },
+        timeout: 15000,
+      });
+      const dailyData = weatherRes.data.daily;
+      weather = {
+        temperature: dailyData.temperature_2m_mean?.[0] || ((dailyData.temperature_2m_max?.[0] + dailyData.temperature_2m_min?.[0]) / 2),
+        temp_max: dailyData.temperature_2m_max?.[0],
+        temp_min: dailyData.temperature_2m_min?.[0],
+        precipitation: dailyData.precipitation_sum?.[0] || 0,
+        radiation: dailyData.shortwave_radiation_sum?.[0],
+        uv_index: dailyData.uv_index_max?.[0],
+      };
+    } catch (e) { /* weather unavailable */ }
+
+    // Build context
     const context = [
-      `Solar Forecast for ${date}: P10=${forecast.p10_kwh} kWh, P50=${forecast.p50_kwh} kWh, P90=${forecast.p90_kwh} kWh`,
-      tes ? `Ice TES Sizing: ${tes.ice_mass_kg} kg ice, ${tes.coverage_pct}% night coverage, COP=${tes.cop_actual}` : "TES data not available",
-      `Tariff: Grid import rate ₹8.5/kWh, Solar export rate ₹4.2/kWh (net metering differential ₹4.3/kWh)`,
+      forecast ? `Solar Forecast: P10=${forecast.p10_kwh} kWh, P50=${forecast.p50_kwh} kWh, P90=${forecast.p90_kwh} kWh` : "Forecast data unavailable",
+      weather ? `Weather: Temperature ${weather.temperature?.toFixed(1)}°C (min ${weather.temp_min?.toFixed(1)}°C, max ${weather.temp_max?.toFixed(1)}°C), precipitation ${weather.precipitation}mm, UV index ${weather.uv_index?.toFixed(1)}` : "Weather data unavailable",
+      `Tariff: Grid import ₹8.5/kWh, Solar export ₹4.2/kWh (savings ₹4.3/kWh)`,
       `Campus: IIT Kharagpur 5.5 MWp solar PV, 21 Halls of Residence, 8173 rooms`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     const prompt = `Generate a concise daily operations summary for the IIT Kharagpur Solar+Ice TES platform. Include:
-1. Expected solar generation range
-2. Ice storage readiness
-3. Energy cost implication (import vs export)
+1. Expected solar generation range (P10-P90)
+2. Weather impact on generation (clouds, temperature, radiation)
+3. Energy cost implication (import vs export savings)
 4. One actionable recommendation
-
-Keep it under 150 words, professional tone.`;
+Keep it under 120 words, professional tone.`;
 
     const summary = await generateAnswer(prompt, context);
 
-    res.json({
-      date,
-      summary,
-      forecast: {
-        p10_kwh: forecast.p10_kwh,
-        p50_kwh: forecast.p50_kwh,
-        p90_kwh: forecast.p90_kwh,
-      },
-      tes: tes ? {
-        ice_mass_kg: tes.ice_mass_kg,
-        coverage_pct: tes.coverage_pct,
-        cop_actual: tes.cop_actual,
-      } : null,
-    });
+    res.json({ date, summary, forecast, weather });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

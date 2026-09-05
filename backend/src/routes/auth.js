@@ -1,22 +1,28 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const { validateAuth } = require("../middleware/validation");
 const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
 // Register
-router.post("/register", validateAuth, async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { email, password, name } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: "Name, email and password are required" });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
       return res.status(400).json({ error: "Email already registered" });
     }
 
-    const user = new User({ email, password, name, role: role || "viewer" });
+    const user = new User({ email: email.toLowerCase(), password, name });
     await user.save();
 
     const token = jwt.sign(
@@ -35,11 +41,15 @@ router.post("/register", validateAuth, async (req, res) => {
 });
 
 // Login
-router.post("/login", validateAuth, async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ error: "Invalid email or password" });
     }

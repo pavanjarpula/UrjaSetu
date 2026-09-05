@@ -14,6 +14,7 @@ const tesRoutes = require("./src/routes/tes");
 const telemetryRoutes = require("./src/routes/telemetry");
 const chatRoutes = require("./src/routes/chat");
 const documentRoutes = require("./src/routes/documents");
+const weatherRoutes = require("./src/routes/weather");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -47,6 +48,7 @@ app.use("/api/tes", tesRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/weather", weatherRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

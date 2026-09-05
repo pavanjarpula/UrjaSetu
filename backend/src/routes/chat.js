@@ -4,7 +4,6 @@ const ChatSession = require("../models/ChatSession");
 const DocumentChunk = require("../models/DocumentChunk");
 const ForecastDaily = require("../models/ForecastDaily");
 const TesRun = require("../models/TesRun");
-const { validateChat } = require("../middleware/validation");
 const { auth } = require("../middleware/auth");
 const { generateAnswer, gradeRelevance, rewriteQuery } = require("../services/llmProvider");
 const axios = require("axios");
@@ -93,7 +92,7 @@ async function fetchLiveData(question) {
 // ─────────────── Corrective RAG Pipeline ───────────────
 const MAX_RETRIES = 1;
 
-async function runCorrectiveRAG(message, sid) {
+async function runCorrectiveRAG(message, sid, history = []) {
   let correctiveAction = null;
   let retries = 0;
   let answer = "";
@@ -185,7 +184,7 @@ async function runCorrectiveRAG(message, sid) {
       citations.push("Live forecast/TES data");
     }
 
-    answer = await generateAnswer(message, context.join("\n\n"));
+    answer = await generateAnswer(message, context.join("\n\n"), history);
 
     // Self-reflection: grade generation
     const reflectPrompt = `You are grading whether the answer is USEFUL (directly answers) and GROUNDED (supported by context).\n\nQuestion: ${message}\nAnswer: ${answer.substring(0, 1500)}\n\nReply: "useful", "not_useful", or "hallucination".`;
@@ -251,12 +250,13 @@ async function runCorrectiveRAG(message, sid) {
 
 // ─────────────── Routes ───────────────
 
-router.post("/", validateChat, async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const { message, session_id } = req.body;
+    const { message, session_id, history } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ error: "Message is required" });
     const sid = session_id || uuidv4();
 
-    const { answer, citations, correctiveAction, retries } = await runCorrectiveRAG(message, sid);
+    const { answer, citations, correctiveAction, retries } = await runCorrectiveRAG(message, sid, history || []);
 
     // Log the turn
     await ChatSession.findOneAndUpdate(

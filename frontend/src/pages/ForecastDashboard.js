@@ -3,7 +3,7 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar
 } from "recharts";
-import { getDailyForecast, getHourlyForecast, getForecastAccuracy } from "../api/client";
+import { getDailyForecast, getHourlyForecast, getForecastAccuracy, getWeatherData } from "../api/client";
 import DailySummaryBoard from "../components/DailySummaryBoard";
 import TariffPanel from "../components/TariffPanel";
 
@@ -12,52 +12,81 @@ const today = () => new Date().toISOString().split("T")[0];
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: "var(--bg-card)", border: "1px solid var(--border-default)",
-      borderRadius: 8, padding: "8px 12px", fontSize: 12
-    }}>
-      <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
+    <div style={{ background: "#171717", border: "1px solid #2a2a2a", borderRadius: 8, padding: "8px 12px", fontSize: 12 }}>
+      <div style={{ fontWeight: 600, marginBottom: 4, color: "#ececec" }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color, display: "flex", justifyContent: "space-between", gap: 16 }}>
           <span>{p.name}</span>
-          <span style={{ fontWeight: 600 }}>{p.value?.toFixed(1)} kWh</span>
+          <span style={{ fontWeight: 600 }}>{p.value?.toFixed?.(1) ?? p.value} kWh</span>
         </div>
       ))}
     </div>
   );
 };
 
-function ChartCard({ title, subtitle, children, accent = "solar" }) {
+const WEATHER_ICONS = {
+  temperature_2m: "🌡️", relative_humidity_2m: "💧", cloud_cover: "☁️",
+  wind_speed_10m: "💨", precipitation: "🌧️", direct_normal_irradiance: "☀️",
+  shortwave_radiation: "🔆", diffuse_radiation: "🌤️", surface_pressure: "📊",
+  uv_index: "🔆", rain: "🌧️", snowfall: "❄️", soil_temperature: "🌍",
+};
+
+const WEATHER_LABELS = {
+  temperature_2m: "Temperature", relative_humidity_2m: "Humidity",
+  cloud_cover: "Cloud Cover", wind_speed_10m: "Wind Speed",
+  precipitation: "Precipitation", direct_normal_irradiance: "DNI",
+  shortwave_radiation: "Radiation", diffuse_radiation: "Diffuse",
+  surface_pressure: "Pressure", uv_index: "UV Index",
+  rain: "Rain", snowfall: "Snowfall", soil_temperature: "Soil Temp",
+};
+
+const WEATHER_UNITS = {
+  temperature_2m: "°C", relative_humidity_2m: "%", cloud_cover: "%",
+  wind_speed_10m: "km/h", precipitation: "mm", direct_normal_irradiance: "W/m²",
+  shortwave_radiation: "W/m²", diffuse_radiation: "W/m²",
+  surface_pressure: "hPa", uv_index: "", rain: "mm", snowfall: "cm",
+  soil_temperature: "°C",
+};
+
+function WeatherPanel({ date }) {
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!date) return;
+    setLoading(true);
+    getWeatherData(date).then((data) => setWeather(data)).catch(() => setWeather(null)).finally(() => setLoading(false));
+  }, [date]);
+
+  if (loading) return <div className="card"><div className="loading-container" style={{ padding: "2rem" }}><div className="spinner spinner-sm" /><div className="loading-text">Fetching weather...</div></div></div>;
+  if (!weather || !weather.hourly) return null;
+
+  const hourly = weather.hourly;
+  const keys = Object.keys(hourly).filter(k => k !== "time" && hourly[k]?.length > 0);
+
+  const latestValues = {};
+  const midIdx = Math.floor((hourly.time?.length || 16) / 2);
+  keys.forEach(k => { latestValues[k] = hourly[k]?.[midIdx]; });
+
   return (
-    <div className={`card card-accent-${accent}`}>
+    <div className="card card-accent-ice mb-6">
       <div className="card-header">
         <div>
-          <div className="card-title">{title}</div>
-          {subtitle && <div className="card-subtitle">{subtitle}</div>}
+          <div className="card-title">☁️ Weather Variables — Open-Meteo</div>
+          <div className="card-subtitle">Live forecast data for IIT Kharagpur (22.32°N, 87.31°E)</div>
         </div>
+        <span className="badge badge-ice">{keys.length} variables</span>
       </div>
-      <div className="card-body">
-        {children}
+      <div className="weather-grid">
+        {keys.map(k => (
+          <div key={k} className="weather-item">
+            <div className="weather-item-icon">{WEATHER_ICONS[k] || "📡"}</div>
+            <div className="weather-item-label">{WEATHER_LABELS[k] || k}</div>
+            <div className="weather-item-value">{latestValues[k]?.toFixed?.(1) ?? "—"}</div>
+            <div className="weather-item-unit">{WEATHER_UNITS[k] || ""}</div>
+          </div>
+        ))}
       </div>
-    </div>
-  );
-}
-
-function LoadingChart() {
-  return (
-    <div className="loading-container" style={{ padding: "3rem" }}>
-      <div className="spinner" />
-      <div className="loading-text">Loading forecast data...</div>
-    </div>
-  );
-}
-
-function EmptyChart({ message = "No data available" }) {
-  return (
-    <div className="empty-state" style={{ padding: "3rem" }}>
-      <div className="empty-state-icon">📈</div>
-      <div className="empty-state-title">{message}</div>
-      <div className="empty-state-desc">Select a different date or refresh to load data.</div>
     </div>
   );
 }
@@ -82,54 +111,38 @@ export default function ForecastDashboard() {
       if (dailyRes.status === "fulfilled") setDaily(dailyRes.value.forecast);
       if (hourlyRes.status === "fulfilled") setHourly(hourlyRes.value);
       if (accRes.status === "fulfilled") setAccuracy(accRes.value);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  const hourlyChartData = hourly?.hourly_kwh
-    ? hourly.hourly_kwh.map((kwh, i) => ({
-        hour: `${String(i + 4).padStart(2, "0")}:00`,
-        predicted_kwh: kwh,
-      }))
+  const hourlyChartData = hourly?.forecast?.hourly_kwh
+    ? hourly.forecast.hourly_kwh.map((kwh, i) => ({ hour: `${String(i + 4).padStart(2, "0")}:00`, "LSTM Output": kwh }))
     : [];
 
   const accuracyData = accuracy?.accuracy
-    ? accuracy.accuracy.reverse().map((a) => ({
+    ? [...accuracy.accuracy].reverse().map((a) => ({
         date: new Date(a.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-        error_pct: a.error_pct,
-        predicted: a.predicted,
-        actual: a.actual,
+        "MAPE %": a.error_pct, "Predicted": a.predicted, "Actual": a.actual,
       }))
     : [];
 
+  const lstmTotal = hourlyChartData.reduce((s, d) => s + (d["LSTM Output"] || 0), 0);
+
   return (
     <div>
-      {/* Simulated data banner */}
       <div className="banner banner-simulated">
         <span className="banner-icon">⚠️</span>
         <span>Telemetry data shown is simulated. O4 sensor hardware not yet deployed.</span>
       </div>
 
-      {/* Page header */}
       <div className="page-header">
         <div className="page-header-row">
           <div>
             <h2 className="page-title">Solar Generation Forecast</h2>
-            <p className="page-subtitle">
-              Day-ahead P10/P50/P90 quantile forecast (XGBoost) + hourly breakdown (LSTM)
-            </p>
+            <p className="page-subtitle">Day-ahead P10/P50/P90 quantile forecast (XGBoost) + hourly LSTM profile</p>
           </div>
           <div className="page-actions">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input"
-              style={{ width: "auto" }}
-            />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" style={{ width: "auto" }} />
             <button className="btn btn-primary" onClick={loadData} disabled={loading}>
               {loading ? <><div className="spinner spinner-sm" /> Loading...</> : "↻ Refresh"}
             </button>
@@ -137,86 +150,114 @@ export default function ForecastDashboard() {
         </div>
       </div>
 
-      {/* Daily summary */}
       <DailySummaryBoard date={date} />
 
-      {/* KPI Cards */}
       {daily && (
         <div className="kpi-grid">
-          <div className="kpi-card" style={{ "--kpi-color": "var(--color-solar)", "--kpi-bg": "rgba(245,158,11,0.1)" }}>
+          <div className="kpi-card" style={{ "--kpi-color": "#f59e0b", "--kpi-bg": "rgba(245,158,11,0.08)" }}>
             <div className="kpi-icon">☀️</div>
             <div className="kpi-label">P50 Forecast</div>
             <div className="kpi-value">{daily.p50_kwh?.toFixed(1)}</div>
             <div className="kpi-sub">kWh expected</div>
           </div>
-          <div className="kpi-card" style={{ "--kpi-color": "var(--color-green)", "--kpi-bg": "rgba(34,197,94,0.1)" }}>
+          <div className="kpi-card" style={{ "--kpi-color": "#10b981", "--kpi-bg": "rgba(16,185,129,0.08)" }}>
             <div className="kpi-icon">📈</div>
             <div className="kpi-label">P90 (Optimistic)</div>
             <div className="kpi-value">{daily.p90_kwh?.toFixed(1)}</div>
             <div className="kpi-sub">kWh upper bound</div>
           </div>
-          <div className="kpi-card" style={{ "--kpi-color": "var(--color-ice)", "--kpi-bg": "rgba(56,189,248,0.1)" }}>
+          <div className="kpi-card" style={{ "--kpi-color": "#38bdf8", "--kpi-bg": "rgba(56,189,248,0.08)" }}>
             <div className="kpi-icon">📉</div>
             <div className="kpi-label">P10 (Conservative)</div>
             <div className="kpi-value">{daily.p10_kwh?.toFixed(1)}</div>
             <div className="kpi-sub">kWh lower bound</div>
           </div>
-          <div className="kpi-card" style={{ "--kpi-color": "var(--color-purple)", "--kpi-bg": "rgba(167,139,250,0.1)" }}>
-            <div className="kpi-icon">🎯</div>
-            <div className="kpi-label">Confidence Band</div>
-            <div className="kpi-value">{daily.p90_kwh && daily.p10_kwh ? (daily.p90_kwh - daily.p10_kwh).toFixed(1) : "—"}</div>
-            <div className="kpi-sub">kWh spread</div>
+          <div className="kpi-card" style={{ "--kpi-color": "#a78bfa", "--kpi-bg": "rgba(167,139,250,0.08)" }}>
+            <div className="kpi-icon">🤖</div>
+            <div className="kpi-label">LSTM Total</div>
+            <div className="kpi-value">{lstmTotal > 0 ? lstmTotal.toFixed(1) : "—"}</div>
+            <div className="kpi-sub">kWh hourly sum</div>
           </div>
         </div>
       )}
 
-      {/* Charts grid */}
-      <div className="grid-2">
-        {/* Hourly forecast */}
-        <ChartCard title="Hourly Generation Profile" subtitle="LSTM prediction, 20-step forecast" accent="solar">
-          {loading ? <LoadingChart /> : hourlyChartData.length > 0 ? (
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={hourlyChartData}>
-                  <defs>
-                    <linearGradient id="gradSolar" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "var(--text-tertiary)" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--text-tertiary)" }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="predicted_kwh" name="Predicted" stroke="#f59e0b" fill="url(#gradSolar)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          ) : <EmptyChart />}
-        </ChartCard>
+      <WeatherPanel date={date} />
 
-        {/* Prediction accuracy */}
-        <ChartCard title="Prediction Accuracy" subtitle="Trailing 14-day MAPE" accent="ice">
-          {loading ? <LoadingChart /> : accuracyData.length > 0 ? (
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={accuracyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--text-tertiary)" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--text-tertiary)" }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar dataKey="actual" name="Actual (kWh)" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={20} />
-                  <Line type="monotone" dataKey="predicted" name="Predicted (kWh)" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
+      <div className="grid-2">
+        <div className="card card-accent-solar">
+          <div className="card-header">
+            <div>
+              <div className="card-title">📈 Hourly Generation Profile</div>
+              <div className="card-subtitle">LSTM model — 16-hour forecast (04:00–19:00)</div>
             </div>
-          ) : <EmptyChart />}
-        </ChartCard>
+          </div>
+          <div className="card-body">
+            {loading ? (
+              <div className="loading-container" style={{ padding: "3rem" }}><div className="spinner" /><div className="loading-text">Loading...</div></div>
+            ) : hourlyChartData.length > 0 ? (
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={hourlyChartData}>
+                    <defs>
+                      <linearGradient id="gradLSTM" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.25} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
+                    <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "#737373" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "#737373" }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="LSTM Output" stroke="#f59e0b" fill="url(#gradLSTM)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="empty-state" style={{ padding: "3rem" }}>
+                <div className="empty-state-icon">📈</div>
+                <div className="empty-state-title">No hourly data</div>
+                <div className="empty-state-desc">LSTM model will generate hourly predictions.</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card card-accent-ice">
+          <div className="card-header">
+            <div>
+              <div className="card-title">🎯 Prediction Accuracy</div>
+              <div className="card-subtitle">Trailing 14-day predicted vs actual</div>
+            </div>
+          </div>
+          <div className="card-body">
+            {loading ? (
+              <div className="loading-container" style={{ padding: "3rem" }}><div className="spinner" /><div className="loading-text">Loading...</div></div>
+            ) : accuracyData.length > 0 ? (
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={accuracyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1f1f1f" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#737373" }} />
+                    <YAxis tick={{ fontSize: 10, fill: "#737373" }} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Legend />
+                    <Bar dataKey="Actual" fill="#38bdf8" radius={[4, 4, 0, 0]} barSize={18} />
+                    <Line type="monotone" dataKey="Predicted" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="empty-state" style={{ padding: "3rem" }}>
+                <div className="empty-state-icon">🎯</div>
+                <div className="empty-state-title">No accuracy data</div>
+                <div className="empty-state-desc">Accuracy tracking starts after backfilling actual generation.</div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Tariff panel */}
-      <TariffPanel />
+      <TariffPanel dailyForecast={daily} />
     </div>
   );
 }

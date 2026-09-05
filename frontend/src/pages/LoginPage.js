@@ -71,6 +71,7 @@ export default function LoginPage({ onLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
               required
+              autoComplete="current-password"
             />
           </div>
 

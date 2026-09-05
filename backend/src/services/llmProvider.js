@@ -48,17 +48,23 @@ async function deepseekChat(messages, temperature = 0.3) {
 
 // ─────────────── Public API ───────────────
 
-async function generateAnswer(question, context) {
+async function generateAnswer(question, context, history = []) {
   const systemPrompt = `You are Urjasetu, an expert assistant for the IIT Kharagpur Solar PV + Ice TES platform.
-Answer questions ONLY using the provided context. Cite sources by name.
+Answer questions using the provided context and conversation history. Cite sources by name.
 If you don't have enough information, say so explicitly.
 Never make up information not present in the context.
-Keep answers concise and factual.`;
+Keep answers concise, factual, and professional.`;
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: `Context:\n${context}\n\nQuestion: ${question}\n\nAnswer:` },
-  ];
+  const messages = [{ role: "system", content: systemPrompt }];
+
+  // Add conversation history for context
+  if (Array.isArray(history) && history.length > 0) {
+    history.slice(-6).forEach(h => {
+      if (h.role && h.content) messages.push({ role: h.role, content: h.content });
+    });
+  }
+
+  messages.push({ role: "user", content: `Context:\n${context}\n\nQuestion: ${question}` });
 
   if (PROVIDER === "deepseek" && DEEPSEEK_API_KEY) {
     try {
