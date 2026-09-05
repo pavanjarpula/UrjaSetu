@@ -34,9 +34,7 @@ uploads/
 tmp/
 .cache/
 
-# Model artifacts (large files - use DVC or git-lfs)
-models/*.keras
-models/*.pkl
+# Model artifacts
 models/*.ipynb
 models/.ipynb_checkpoints/
 

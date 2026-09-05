@@ -1,26 +1,4 @@
 services:
-  # ─── ML Service (Python FastAPI) ───
-  - type: web
-    name: urjasetu-ml-service
-    runtime: python
-    plan: free
-    buildCommand: pip install -r ml-service/requirements.txt
-    startCommand: uvicorn ml-service.app.main:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: MODEL_DIR
-        value: /opt/render/project/src/models
-      - key: DATASET_DIR
-        value: /opt/render/project/src/dataset
-      - key: MONGO_URI
-        sync: false
-      - key: MONGO_DB_NAME
-        value: urjasetu_database
-      - key: LANGCHAIN_API_KEY
-        sync: false
-      - key: LANGCHAIN_TRACING_V2
-        value: "true"
-    healthCheckPath: /health
-
   # ─── Backend (Node.js Express) ───
   - type: web
     name: urjasetu-backend
@@ -30,15 +8,13 @@ services:
     startCommand: cd backend && node server.js
     envVars:
       - key: MONGO_URI
-        sync: false
-      - key: MONGO_DB_NAME
-        value: urjasetu_database
+        value: "mongodb+srv://mepavaniitkgp_db_user:OkeDvLvXNdK2Xr2y@urjasetu.2f5foqc.mongodb.net/urjasetu_database?retryWrites=true&w=majority&appName=urjasetu"
       - key: JWT_SECRET
         generateValue: true
       - key: LLM_PROVIDER
         value: deepseek
       - key: DEEPSEEK_API_KEY
-        sync: false
+        value: "sk-88bd9337a191402d8f9bdb564bb9c17a"
       - key: DEEPSEEK_MODEL
         value: deepseek-chat
       - key: ML_SERVICE_URL
@@ -49,8 +25,23 @@ services:
       - key: CLIENT_URL
         value: https://urjasetu.vercel.app
       - key: TAVILY_API_KEY
-        sync: false
-      - key: LANGCHAIN_API_KEY
-        sync: false
-      - key: LANGCHAIN_TRACING_V2
-        value: "true"
+        value: "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"
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+
+  # ─── ML Service (Python FastAPI) ───
+  - type: web
+    name: urjasetu-ml-service
+    runtime: python
+    plan: free
+    buildCommand: cd ml-service && pip install -r requirements.txt
+    startCommand: cd ml-service && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MODEL_DIR
+        value: /opt/render/project/src/models
+      - key: DATASET_DIR
+        value: /opt/render/project/src/dataset
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+    healthCheckPath: /health
