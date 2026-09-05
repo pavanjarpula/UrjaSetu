@@ -1,8 +1,8 @@
 {
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/build",
-  "framework": "create-react-app",
+  "buildCommand": "npm install && npm run build",
+  "outputDirectory": "build",
   "installCommand": "npm install",
+  "framework": "create-react-app",
   "rewrites": [
     {
       "source": "/api/(.*)",
