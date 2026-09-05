@@ -43,19 +43,21 @@ router.get("/dynamic", validateForecast, async (req, res) => {
 
     // 2. Send weather to ML service for XGBoost daily prediction
     let dailyResult = null;
+    const validateDaily = (r) => r && r.p50_kwh > 2000 && r.p50_kwh < 40000 && r.p10_kwh > -1000;
     try {
       const xgbRes = await axios.post(`${ML_SERVICE}/predict/daily/openmeteo`, {
         date,
         hourly: weather.hourly,
       }, { timeout: 90000 });
-      dailyResult = xgbRes.data;
+      if (validateDaily(xgbRes.data)) dailyResult = xgbRes.data;
+      else console.warn("[DYNAMIC] XGBoost returned unreasonable values, will use fallback");
     } catch (e) {
       console.warn("[DYNAMIC] XGBoost daily POST failed, trying GET fallback:", e.message);
       try {
         const xgbGet = await axios.get(`${ML_SERVICE}/forecast/daily`, {
           params: { date }, timeout: 90000,
         });
-        if (xgbGet.data?.forecast) {
+        if (xgbGet.data?.forecast && validateDaily(xgbGet.data.forecast)) {
           dailyResult = xgbGet.data.forecast;
         }
       } catch (e2) {

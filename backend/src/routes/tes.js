@@ -23,13 +23,18 @@ router.get("/sizing", async (req, res) => {
 
     // Get from ML service (forecast + TES sizing combined)
     let forecast, tes;
+    const validForecast = (f) => f && f.p50_kwh > 2000 && f.p50_kwh < 40000;
     try {
       const response = await axios.get(`${ML_SERVICE}/tes/sizing/for-date`, {
         params: { date },
         timeout: 90000,
       });
-      forecast = response.data.forecast;
-      tes = response.data.tes;
+      if (validForecast(response.data.forecast) && response.data.tes?.ice_mass_kg > 0) {
+        forecast = response.data.forecast;
+        tes = response.data.tes;
+      } else {
+        throw new Error("ML returned invalid forecast/tes values");
+      }
     } catch (mlErr) {
       console.warn("[TES] ML service unavailable, using weather-based estimate:", mlErr.message);
 
