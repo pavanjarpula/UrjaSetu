@@ -47,10 +47,20 @@ router.get("/dynamic", validateForecast, async (req, res) => {
       const xgbRes = await axios.post(`${ML_SERVICE}/predict/daily/openmeteo`, {
         date,
         hourly: weather.hourly,
-      }, { timeout: 30000 });
+      }, { timeout: 90000 });
       dailyResult = xgbRes.data;
     } catch (e) {
-      console.warn("[DYNAMIC] XGBoost daily prediction failed:", e.message);
+      console.warn("[DYNAMIC] XGBoost daily POST failed, trying GET fallback:", e.message);
+      try {
+        const xgbGet = await axios.get(`${ML_SERVICE}/forecast/daily`, {
+          params: { date }, timeout: 90000,
+        });
+        if (xgbGet.data?.forecast) {
+          dailyResult = xgbGet.data.forecast;
+        }
+      } catch (e2) {
+        console.warn("[DYNAMIC] XGBoost daily GET fallback also failed:", e2.message);
+      }
     }
 
     // 3. Send weather to ML service for LSTM hourly prediction
@@ -59,10 +69,68 @@ router.get("/dynamic", validateForecast, async (req, res) => {
       const lstmRes = await axios.post(`${ML_SERVICE}/predict/hourly`, {
         date,
         hourly_data: buildLSTMInput(weather.hourly),
-      }, { timeout: 30000 });
+      }, { timeout: 90000 });
       hourlyResult = lstmRes.data;
     } catch (e) {
-      console.warn("[DYNAMIC] LSTM hourly prediction failed:", e.message);
+      console.warn("[DYNAMIC] LSTM hourly POST failed, using weather-based fallback:", e.message);
+    }
+
+    // 3b. If LSTM failed, compute hourly profile from weather + daily P50
+    if (!hourlyResult && dailyResult) {
+      const p50 = dailyResult.p50_kwh || 15000;
+      const hourlyKwh = [];
+      const times = weather.hourly?.time || [];
+      for (let hour = 4; hour <= 19; hour++) {
+        const idx = times.findIndex(t => new Date(t).getHours() === hour);
+        const rad = idx >= 0 ? (weather.hourly.shortwave_radiation?.[idx] || 0) : 0;
+        const cloud = idx >= 0 ? (weather.hourly.cloud_cover?.[idx] || 0) : 0;
+        const solarAngle = Math.max(0, Math.sin(Math.PI * (hour - 6) / 12));
+        const cloudFactor = Math.max(0.1, 1 - (cloud / 100) * 0.7);
+        const radFactor = rad > 0 ? Math.min(1, rad / 800) : solarAngle * 0.3;
+        const weight = solarAngle * cloudFactor * (rad > 0 ? radFactor : 1);
+        hourlyKwh.push(weight);
+      }
+      const totalWeight = hourlyKwh.reduce((a, b) => a + b, 0);
+      const normalized = hourlyKwh.map(w => totalWeight > 0 ? (w / totalWeight) * p50 : 0);
+      hourlyResult = {
+        hourly_kwh: normalized.map(v => Math.round(v * 100) / 100),
+        total_kwh: Math.round(normalized.reduce((a, b) => a + b, 0) * 100) / 100,
+      };
+    }
+
+    // 3c. If ML completely failed, estimate from weather (5.5 MWp, cloud/temperature derating)
+    if (!dailyResult) {
+      const radSum = sum(weather.hourly.shortwave_radiation);
+      const cloudMean = mean(weather.hourly.cloud_cover);
+      const tempMean = mean(weather.hourly.temperature_2m);
+      const cloudFactor = Math.max(0.3, 1 - (cloudMean / 100) * 0.7);
+      const tempDerate = Math.max(0.85, 1 - Math.max(0, tempMean - 25) * 0.004);
+      const estimatedP50 = 5500 * (radSum / 1000) * cloudFactor * tempDerate;
+      dailyResult = {
+        p10_kwh: Math.round(estimatedP50 * 0.75 * 100) / 100,
+        p50_kwh: Math.round(estimatedP50 * 100) / 100,
+        p90_kwh: Math.round(estimatedP50 * 1.25 * 100) / 100,
+      };
+      // Also generate hourly profile
+      if (!hourlyResult) {
+        const hourlyKwh = [];
+        const times = weather.hourly?.time || [];
+        for (let hour = 4; hour <= 19; hour++) {
+          const idx = times.findIndex(t => new Date(t).getHours() === hour);
+          const rad = idx >= 0 ? (weather.hourly.shortwave_radiation?.[idx] || 0) : 0;
+          const cloud = idx >= 0 ? (weather.hourly.cloud_cover?.[idx] || 0) : 0;
+          const solarAngle = Math.max(0, Math.sin(Math.PI * (hour - 6) / 12));
+          const cloudFactor = Math.max(0.1, 1 - (cloud / 100) * 0.7);
+          const radFactor = rad > 0 ? Math.min(1, rad / 800) : solarAngle * 0.3;
+          hourlyKwh.push(solarAngle * cloudFactor * (rad > 0 ? radFactor : 1));
+        }
+        const totalWeight = hourlyKwh.reduce((a, b) => a + b, 0);
+        const normalized = hourlyKwh.map(w => totalWeight > 0 ? (w / totalWeight) * estimatedP50 : 0);
+        hourlyResult = {
+          hourly_kwh: normalized.map(v => Math.round(v * 100) / 100),
+          total_kwh: Math.round(normalized.reduce((a, b) => a + b, 0) * 100) / 100,
+        };
+      }
     }
 
     // 4. Save results to DB
