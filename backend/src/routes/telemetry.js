@@ -1,6 +1,6 @@
 const express = require("express");
 const Telemetry = require("../models/Telemetry");
-const { auth, requireAdmin } = require("../middleware/auth");
+const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -61,7 +61,7 @@ router.post("/ingest", auth, async (req, res) => {
 });
 
 // Generate simulated telemetry data
-router.post("/simulate", auth, requireAdmin, async (req, res) => {
+router.post("/simulate", auth, async (req, res) => {
   try {
     const { date, hours = 24 } = req.body;
 

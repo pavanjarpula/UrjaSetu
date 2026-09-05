@@ -23,6 +23,7 @@ export const getDailyForecast = (date) => request(`/api/forecast/daily?date=${da
 export const getHourlyForecast = (date) => request(`/api/forecast/hourly?date=${date}`);
 export const getForecastAccuracy = (days = 14) => request(`/api/forecast/accuracy?days=${days}`);
 export const getDailySummary = (date) => request(`/api/forecast/daily-summary?date=${date}`);
+export const getDynamicForecast = (date) => request(`/api/forecast/dynamic?date=${date}`);
 
 // Weather
 export const getWeatherData = (date) => request(`/api/weather?date=${date}`);

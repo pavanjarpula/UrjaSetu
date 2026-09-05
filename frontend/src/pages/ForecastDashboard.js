@@ -3,7 +3,7 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar
 } from "recharts";
-import { getDailyForecast, getHourlyForecast, getForecastAccuracy } from "../api/client";
+import { getDynamicForecast, getForecastAccuracy } from "../api/client";
 import DailySummaryBoard from "../components/DailySummaryBoard";
 import TariffPanel from "../components/TariffPanel";
 import WeatherPanel from "../components/WeatherPanel";
@@ -29,28 +29,36 @@ export default function ForecastDashboard() {
   const [date, setDate] = useState(today());
   const [daily, setDaily] = useState(null);
   const [hourly, setHourly] = useState(null);
+  const [weatherStats, setWeatherStats] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [forecastSource, setForecastSource] = useState(null);
 
   useEffect(() => { loadData(); }, [date]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [dailyRes, hourlyRes, accRes] = await Promise.allSettled([
-        getDailyForecast(date),
-        getHourlyForecast(date),
+      const [dynRes, accRes] = await Promise.allSettled([
+        getDynamicForecast(date),
         getForecastAccuracy(14),
       ]);
-      if (dailyRes.status === "fulfilled") setDaily(dailyRes.value.forecast);
-      if (hourlyRes.status === "fulfilled") setHourly(hourlyRes.value);
+
+      if (dynRes.status === "fulfilled") {
+        const d = dynRes.value;
+        setDaily(d.daily);
+        setHourly(d.hourly);
+        setWeatherStats(d.weather);
+        setForecastSource(d.source);
+      }
+
       if (accRes.status === "fulfilled") setAccuracy(accRes.value);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  const hourlyChartData = hourly?.forecast?.hourly_kwh
-    ? hourly.forecast.hourly_kwh.map((kwh, i) => ({ hour: `${String(i + 4).padStart(2, "0")}:00`, "LSTM Output": kwh }))
+  const hourlyChartData = hourly?.hourly_kwh
+    ? hourly.hourly_kwh.map((kwh, i) => ({ hour: `${String(i + 4).padStart(2, "0")}:00`, "LSTM Output": kwh }))
     : [];
 
   const accuracyData = accuracy?.accuracy
@@ -73,7 +81,10 @@ export default function ForecastDashboard() {
         <div className="page-header-row">
           <div>
             <h2 className="page-title">Solar Generation Forecast</h2>
-            <p className="page-subtitle">Day-ahead P10/P50/P90 quantile forecast (XGBoost) + hourly LSTM profile</p>
+            <p className="page-subtitle">
+              Live weather → XGBoost (P10/P50/P90) + LSTM hourly profile
+              {forecastSource && <span className="badge badge-ice" style={{ marginLeft: 8 }}>{forecastSource}</span>}
+            </p>
           </div>
           <div className="page-actions">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input" style={{ width: "auto" }} />
@@ -115,6 +126,35 @@ export default function ForecastDashboard() {
         </div>
       )}
 
+      {weatherStats && (
+        <div className="kpi-grid">
+          <div className="kpi-card" style={{ "--kpi-color": "#ef4444", "--kpi-bg": "rgba(239,68,68,0.06)" }}>
+            <div className="kpi-icon">🌡️</div>
+            <div className="kpi-label">Temperature</div>
+            <div className="kpi-value">{weatherStats.temp_max != null ? `${weatherStats.temp_max?.toFixed(0)}° / ${weatherStats.temp_min?.toFixed(0)}°` : "—"}</div>
+            <div className="kpi-sub">max / min °C</div>
+          </div>
+          <div className="kpi-card" style={{ "--kpi-color": "#94a3b8", "--kpi-bg": "rgba(148,163,184,0.06)" }}>
+            <div className="kpi-icon">☁️</div>
+            <div className="kpi-label">Cloud Cover</div>
+            <div className="kpi-value">{weatherStats.cloud_mean != null ? `${Math.round(weatherStats.cloud_mean)}%` : "—"}</div>
+            <div className="kpi-sub">mean</div>
+          </div>
+          <div className="kpi-card" style={{ "--kpi-color": "#f59e0b", "--kpi-bg": "rgba(245,158,11,0.06)" }}>
+            <div className="kpi-icon">☀️</div>
+            <div className="kpi-label">Radiation Sum</div>
+            <div className="kpi-value">{weatherStats.rad_sum != null ? Math.round(weatherStats.rad_sum) : "—"}</div>
+            <div className="kpi-sub">W/m² total</div>
+          </div>
+          <div className="kpi-card" style={{ "--kpi-color": "#38bdf8", "--kpi-bg": "rgba(56,189,248,0.06)" }}>
+            <div className="kpi-icon">🌧️</div>
+            <div className="kpi-label">Precipitation</div>
+            <div className="kpi-value">{weatherStats.precip_sum != null ? `${weatherStats.precip_sum.toFixed(1)}` : "—"}</div>
+            <div className="kpi-sub">mm total</div>
+          </div>
+        </div>
+      )}
+
       <WeatherPanel date={date} />
 
       <div className="grid-2">
@@ -122,7 +162,7 @@ export default function ForecastDashboard() {
           <div className="card-header">
             <div>
               <div className="card-title">📈 Hourly Generation Profile</div>
-              <div className="card-subtitle">LSTM model — 16-hour forecast (04:00–19:00)</div>
+              <div className="card-subtitle">LSTM model — 16-hour forecast (04:00–19:00) from live weather</div>
             </div>
           </div>
           <div className="card-body">
@@ -150,7 +190,7 @@ export default function ForecastDashboard() {
               <div className="empty-state" style={{ padding: "3rem" }}>
                 <div className="empty-state-icon">📈</div>
                 <div className="empty-state-title">No hourly data</div>
-                <div className="empty-state-desc">LSTM model will generate hourly predictions.</div>
+                <div className="empty-state-desc">LSTM model will generate hourly predictions from live weather.</div>
               </div>
             )}
           </div>

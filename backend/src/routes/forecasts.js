@@ -8,6 +8,152 @@ const { auth } = require("../middleware/auth");
 const router = express.Router();
 const ML_SERVICE = process.env.ML_SERVICE_URL || "http://localhost:8001";
 
+const LAT = 22.3149, LON = 87.3105;
+
+// ─── Dynamic Forecast: live weather → XGBoost + LSTM in one call ───
+router.get("/dynamic", validateForecast, async (req, res) => {
+  try {
+    const { date } = req.query;
+
+    // 1. Fetch live weather from Open-Meteo (hourly + daily)
+    const weatherRes = await axios.get("https://api.open-meteo.com/v1/forecast", {
+      params: {
+        latitude: LAT, longitude: LON,
+        hourly: [
+          "temperature_2m", "relative_humidity_2m", "dew_point_2m",
+          "cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high",
+          "precipitation", "rain", "snowfall",
+          "surface_pressure", "wind_speed_10m", "wind_direction_10m",
+          "direct_normal_irradiance", "direct_radiation", "diffuse_radiation",
+          "shortwave_radiation", "global_tilted_irradiance",
+          "soil_temperature_6cm",
+        ].join(","),
+        daily: [
+          "temperature_2m_max", "temperature_2m_min", "temperature_2m_mean",
+          "precipitation_sum", "rain_sum", "wind_speed_10m_max",
+          "shortwave_radiation_sum", "uv_index_max",
+        ].join(","),
+        timezone: "Asia/Kolkata",
+        start_date: date, end_date: date,
+      },
+      timeout: 15000,
+    });
+
+    const weather = weatherRes.data;
+
+    // 2. Send weather to ML service for XGBoost daily prediction
+    let dailyResult = null;
+    try {
+      const xgbRes = await axios.post(`${ML_SERVICE}/predict/daily/openmeteo`, {
+        date,
+        hourly: weather.hourly,
+      }, { timeout: 30000 });
+      dailyResult = xgbRes.data;
+    } catch (e) {
+      console.warn("[DYNAMIC] XGBoost daily prediction failed:", e.message);
+    }
+
+    // 3. Send weather to ML service for LSTM hourly prediction
+    let hourlyResult = null;
+    try {
+      const lstmRes = await axios.post(`${ML_SERVICE}/predict/hourly`, {
+        date,
+        hourly_data: buildLSTMInput(weather.hourly),
+      }, { timeout: 30000 });
+      hourlyResult = lstmRes.data;
+    } catch (e) {
+      console.warn("[DYNAMIC] LSTM hourly prediction failed:", e.message);
+    }
+
+    // 4. Save results to DB
+    if (dailyResult) {
+      await ForecastDaily.findOneAndUpdate(
+        { date: new Date(date) },
+        {
+          date: new Date(date),
+          p10_kwh: dailyResult.p10_kwh,
+          p50_kwh: dailyResult.p50_kwh,
+          p90_kwh: dailyResult.p90_kwh,
+          weather_features: {
+            temp_mean: mean(weather.hourly.temperature_2m),
+            cloud_cover_mean: mean(weather.hourly.cloud_cover),
+            humidity_mean: mean(weather.hourly.relative_humidity_2m),
+            ghi_sum: sum(weather.hourly.shortwave_radiation),
+            dni_sum: sum(weather.hourly.direct_normal_irradiance),
+            diffuse_sum: sum(weather.hourly.diffuse_radiation),
+            precipitation_sum: sum(weather.hourly.precipitation),
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    if (hourlyResult) {
+      await ForecastHourly.findOneAndUpdate(
+        { date: new Date(date) },
+        {
+          date: new Date(date),
+          hourly_kwh: hourlyResult.hourly_kwh,
+          total_kwh: hourlyResult.total_kwh,
+          source: "lstm_live_weather",
+        },
+        { upsert: true }
+      );
+    }
+
+    res.json({
+      date,
+      source: "dynamic_live_weather",
+      daily: dailyResult,
+      hourly: hourlyResult,
+      weather: {
+        temp_max: max(weather.hourly.temperature_2m),
+        temp_min: min(weather.hourly.temperature_2m),
+        cloud_mean: mean(weather.hourly.cloud_cover),
+        rad_sum: sum(weather.hourly.shortwave_radiation),
+        precip_sum: sum(weather.hourly.precipitation),
+        wind_max: max(weather.hourly.wind_speed_10m),
+        uv_max: weather.daily?.uv_index_max?.[0] || null,
+      },
+    });
+  } catch (error) {
+    console.error("[DYNAMIC] Failed:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── Extract 16 solar hours (04:00-19:00) from hourly arrays for LSTM ───
+function buildLSTMInput(hourly) {
+  const timeArr = hourly.time || [];
+  const rows = [];
+  for (let i = 0; i < timeArr.length; i++) {
+    const hr = new Date(timeArr[i]).getHours();
+    if (hr < 4 || hr > 19) continue;
+    rows.push({
+      temp_2m: hourly.temperature_2m?.[i] ?? 0,
+      cloud_cover: hourly.cloud_cover?.[i] ?? 0,
+      cloud_cover_low: hourly.cloud_cover_low?.[i] ?? 0,
+      cloud_cover_mid: hourly.cloud_cover_mid?.[i] ?? 0,
+      cloud_cover_high: hourly.cloud_cover_high?.[i] ?? 0,
+      precipitation: hourly.precipitation?.[i] ?? 0,
+      relative_humidity: hourly.relative_humidity_2m?.[i] ?? 0,
+      shortwave_radiation: hourly.shortwave_radiation?.[i] ?? 0,
+      dni: hourly.direct_normal_irradiance?.[i] ?? 0,
+      diffuse_radiation: hourly.diffuse_radiation?.[i] ?? 0,
+    });
+  }
+  // Pad if < 16 rows
+  while (rows.length < 16) {
+    rows.push({ temp_2m: 0, cloud_cover: 0, cloud_cover_low: 0, cloud_cover_mid: 0, cloud_cover_high: 0, precipitation: 0, relative_humidity: 0, shortwave_radiation: 0, dni: 0, diffuse_radiation: 0 });
+  }
+  return rows.slice(0, 16);
+}
+
+function mean(arr) { if (!arr || arr.length === 0) return 0; return arr.reduce((a, b) => a + (b || 0), 0) / arr.length; }
+function sum(arr) { if (!arr || arr.length === 0) return 0; return arr.reduce((a, b) => a + (b || 0), 0); }
+function max(arr) { if (!arr || arr.length === 0) return null; return Math.max(...arr.map(v => v ?? -Infinity)); }
+function min(arr) { if (!arr || arr.length === 0) return null; return Math.min(...arr.map(v => v ?? Infinity)); }
+
 // Get daily forecast (from DB or fetch fresh)
 router.get("/daily", validateForecast, async (req, res) => {
   try {
