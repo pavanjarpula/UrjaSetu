@@ -7,44 +7,76 @@ import TelemetryDashboard from "./pages/TelemetryDashboard";
 import SolarPolicyDashboard from "./pages/SolarPolicyDashboard";
 import LoginPage from "./pages/LoginPage";
 import ChatWidget from "./components/ChatWidget";
-import "./App.css";
+
+const NAV_ITEMS = [
+  { section: "Analytics" },
+  { to: "/", label: "Solar Forecast", icon: "☀️" },
+  { to: "/tes", label: "Ice TES Sizing", icon: "❄️" },
+  { to: "/telemetry", label: "Live Telemetry", icon: "📡", badge: "LIVE" },
+  { section: "Research" },
+  { to: "/policy", label: "Solar Policy RL", icon: "📊" },
+];
 
 function Sidebar({ user, onLogout }) {
   const location = useLocation();
-  const links = [
-    { to: "/", label: "Forecast Dashboard", icon: "☀" },
-    { to: "/tes", label: "Ice TES Sizing", icon: "❄" },
-    { to: "/telemetry", label: "Telemetry", icon: "📡" },
-    { to: "/policy", label: "Solar Policy", icon: "📊" },
-  ];
 
   return (
-    <nav className="sidebar">
-      <div className="sidebar-logo">
-        <h1>Urjasetu</h1>
-        <p>Solar + Ice TES Platform</p>
+    <nav className="sidebar" role="navigation" aria-label="Main navigation">
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-icon">⚡</div>
+        <div className="sidebar-brand-text">
+          <h1>Urjasetu</h1>
+          <p>Solar + Ice TES Platform</p>
+        </div>
       </div>
-      <ul className="sidebar-nav">
-        {links.map((link) => (
-          <li key={link.to}>
+
+      <div className="sidebar-nav">
+        {NAV_ITEMS.map((item, i) => {
+          if (item.section) {
+            return (
+              <div key={item.section} className="sidebar-section-label">
+                {item.section}
+              </div>
+            );
+          }
+          return (
             <Link
-              to={link.to}
-              className={location.pathname === link.to ? "active" : ""}
+              key={item.to}
+              to={item.to}
+              className={`sidebar-link ${location.pathname === item.to ? "active" : ""}`}
             >
-              <span>{link.icon}</span> {link.label}
+              <span className="sidebar-link-icon">{item.icon}</span>
+              <span>{item.label}</span>
+              {item.badge && <span className="sidebar-link-badge">{item.badge}</span>}
             </Link>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
+
       {user && (
-        <div className="sidebar-user">
-          <p>{user.name}</p>
-          <button onClick={onLogout} className="btn btn-secondary btn-sm">
-            Logout
-          </button>
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="sidebar-avatar">{user.name?.charAt(0)?.toUpperCase() || "U"}</div>
+            <div className="sidebar-user-info">
+              <div className="sidebar-user-name">{user.name}</div>
+              <div className="sidebar-user-role">Operator</div>
+            </div>
+            <button onClick={onLogout} className="btn btn-ghost btn-icon" title="Logout">
+              🚪
+            </button>
+          </div>
         </div>
       )}
     </nav>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <div className="loading-container" style={{ minHeight: "100vh" }}>
+      <div className="spinner" />
+      <div className="loading-text">Loading platform...</div>
+    </div>
   );
 }
 
@@ -64,22 +96,13 @@ export default function App() {
     }
   }, []);
 
-  const handleLogin = (userData) => {
-    setUser(userData.user);
-  };
-
+  const handleLogin = (userData) => setUser(userData.user);
   const handleLogout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
-  if (loading) {
-    return (
-      <div className="app loading">
-        <div className="spinner" />
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   if (!user) {
     return (
@@ -91,7 +114,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="app">
+      <div className="app-shell">
         <Sidebar user={user} onLogout={handleLogout} />
         <main className="main-content">
           <Routes>
