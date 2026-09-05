@@ -17,8 +17,7 @@ const NAV_ITEMS = [
   { to: "/policy", label: "Solar Policy RL", icon: "📊" },
 ];
 
-function TopBar({ user, onLogout }) {
-  const navigate = useNavigate();
+function TopBar({ user, onLogout, onOpenChat }) {
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -28,6 +27,20 @@ function TopBar({ user, onLogout }) {
         </div>
       </div>
       <div className="topbar-right">
+        <button onClick={onOpenChat} style={{
+          padding: "6px 14px", borderRadius: 8, background: "transparent",
+          border: "1px solid #2a2a2a", color: "#a3a3a3", fontSize: 13,
+          cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+          transition: "all 0.15s",
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "#f59e0b"; e.currentTarget.style.color = "#f59e0b"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "#2a2a2a"; e.currentTarget.style.color = "#a3a3a3"; }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          AI Chat
+        </button>
         <div className="topbar-status">
           <span className="topbar-status-dot" />
           <span>System Online</span>
@@ -96,6 +109,7 @@ function LoadingScreen() {
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -115,7 +129,7 @@ export default function App() {
       <div className="app-shell">
         <Sidebar />
         <div className="main-area">
-          <TopBar user={user} onLogout={handleLogout} />
+          <TopBar user={user} onLogout={handleLogout} onOpenChat={() => setChatOpen(true)} />
           <main className="main-content">
             <Routes>
               <Route path="/" element={<ForecastDashboard />} />
@@ -125,7 +139,18 @@ export default function App() {
             </Routes>
           </main>
         </div>
-        <ChatWidget />
+
+        {/* Chat FAB */}
+        {!chatOpen && (
+          <button className="chat-fab" onClick={() => setChatOpen(true)} title="Open AI Chat">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        )}
+
+        {/* Full-page chat overlay */}
+        {chatOpen && <ChatWidget onClose={() => setChatOpen(false)} />}
       </div>
     </BrowserRouter>
   );
