@@ -3,9 +3,10 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar
 } from "recharts";
-import { getDailyForecast, getHourlyForecast, getForecastAccuracy, getWeatherData } from "../api/client";
+import { getDailyForecast, getHourlyForecast, getForecastAccuracy } from "../api/client";
 import DailySummaryBoard from "../components/DailySummaryBoard";
 import TariffPanel from "../components/TariffPanel";
+import WeatherPanel from "../components/WeatherPanel";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -23,73 +24,6 @@ const CustomTooltip = ({ active, payload, label }) => {
     </div>
   );
 };
-
-const WEATHER_ICONS = {
-  temperature_2m: "🌡️", relative_humidity_2m: "💧", cloud_cover: "☁️",
-  wind_speed_10m: "💨", precipitation: "🌧️", direct_normal_irradiance: "☀️",
-  shortwave_radiation: "🔆", diffuse_radiation: "🌤️", surface_pressure: "📊",
-  uv_index: "🔆", rain: "🌧️", snowfall: "❄️", soil_temperature: "🌍",
-};
-
-const WEATHER_LABELS = {
-  temperature_2m: "Temperature", relative_humidity_2m: "Humidity",
-  cloud_cover: "Cloud Cover", wind_speed_10m: "Wind Speed",
-  precipitation: "Precipitation", direct_normal_irradiance: "DNI",
-  shortwave_radiation: "Radiation", diffuse_radiation: "Diffuse",
-  surface_pressure: "Pressure", uv_index: "UV Index",
-  rain: "Rain", snowfall: "Snowfall", soil_temperature: "Soil Temp",
-};
-
-const WEATHER_UNITS = {
-  temperature_2m: "°C", relative_humidity_2m: "%", cloud_cover: "%",
-  wind_speed_10m: "km/h", precipitation: "mm", direct_normal_irradiance: "W/m²",
-  shortwave_radiation: "W/m²", diffuse_radiation: "W/m²",
-  surface_pressure: "hPa", uv_index: "", rain: "mm", snowfall: "cm",
-  soil_temperature: "°C",
-};
-
-function WeatherPanel({ date }) {
-  const [weather, setWeather] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!date) return;
-    setLoading(true);
-    getWeatherData(date).then((data) => setWeather(data)).catch(() => setWeather(null)).finally(() => setLoading(false));
-  }, [date]);
-
-  if (loading) return <div className="card"><div className="loading-container" style={{ padding: "2rem" }}><div className="spinner spinner-sm" /><div className="loading-text">Fetching weather...</div></div></div>;
-  if (!weather || !weather.hourly) return null;
-
-  const hourly = weather.hourly;
-  const keys = Object.keys(hourly).filter(k => k !== "time" && hourly[k]?.length > 0);
-
-  const latestValues = {};
-  const midIdx = Math.floor((hourly.time?.length || 16) / 2);
-  keys.forEach(k => { latestValues[k] = hourly[k]?.[midIdx]; });
-
-  return (
-    <div className="card card-accent-ice mb-6">
-      <div className="card-header">
-        <div>
-          <div className="card-title">☁️ Weather Variables — Open-Meteo</div>
-          <div className="card-subtitle">Live forecast data for IIT Kharagpur (22.32°N, 87.31°E)</div>
-        </div>
-        <span className="badge badge-ice">{keys.length} variables</span>
-      </div>
-      <div className="weather-grid">
-        {keys.map(k => (
-          <div key={k} className="weather-item">
-            <div className="weather-item-icon">{WEATHER_ICONS[k] || "📡"}</div>
-            <div className="weather-item-label">{WEATHER_LABELS[k] || k}</div>
-            <div className="weather-item-value">{latestValues[k]?.toFixed?.(1) ?? "—"}</div>
-            <div className="weather-item-unit">{WEATHER_UNITS[k] || ""}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function ForecastDashboard() {
   const [date, setDate] = useState(today());
