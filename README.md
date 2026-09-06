@@ -57,17 +57,21 @@
            ▼                    ▼                  ▼
 ┌──────────────────┐ ┌─────────────────┐ ┌──────────────────────────┐
 │ Open-Meteo API   │ │ ML Service      │ │ MongoDB Atlas            │
-│ (Free, no key)   │ │ FastAPI + XGB   │ │ urjasetu_database        │
-│                  │ │ + LSTM + RAG    │ │ ┌──────────┐ ┌─────────┐ │
-│ 19 hourly fields │ │                 │ │ │ users    │ │ forecasts│ │
-│ 8 daily fields   │ │ /forecast/daily │ │ └──────────┘ └─────────┘ │
-│ KGP coords       │ │ /forecast/hourly│ │ ┌──────────┐ ┌─────────┐ │
-│ 22.3149°N        │ │ /tes/sizing     │ │ │ tesruns  │ │ chat    │ │
-│ 87.3105°E        │ │ /embed          │ │ └──────────┘ └─────────┘ │
-│                  │ │ /health         │ │ ┌──────────────────────┐  │
-│                  │ │                 │ │ │ Vector Search Index  │  │
-│                  │ │ DeepSeek LLM    │ │ │ (rag_chunks)         │  │
-│                  │ │ for RAG gen     │ │ └──────────────────────┘  │
+│ (Free, no key)   │ │ FastAPI          │ │ urjasetu_database        │
+│                  │ │                  │ │ ┌──────────┐ ┌─────────┐ │
+│ 10 hourly vars   │ │ XGBoost (daily) │ │ │ users    │ │ forecasts│ │
+│ temp, cloud,     │ │ P10/P50/P90     │ │ └──────────┘ └─────────┘ │
+│ radiation, etc.  │ │ 25 features     │ │ ┌──────────┐ ┌─────────┐ │
+│ KGP coords       │ │                  │ │ │ tesruns  │ │ chat    │ │
+│ 22.3149°N        │ │ LSTM (hourly)   │ │ └──────────┘ └─────────┘ │
+│ 87.3105°E        │ │ 13 features     │ │ ┌──────────────────────┐  │
+│                  │ │ 16-hour profile │ │ │ Vector Search Index  │  │
+│                  │ │                  │ │ │ (rag_chunks)         │  │
+│                  │ │ TES Engine       │ │ └──────────────────────┘  │
+│                  │ │ 21 halls, COP   │ │                           │
+│                  │ │                  │ │                           │
+│                  │ │ DeepSeek LLM    │ │                           │
+│                  │ │ for RAG gen     │ │                           │
 └──────────────────┘ └─────────────────┘ └──────────────────────────┘
 ```
 
@@ -81,21 +85,21 @@
 
 The core intelligence engine — predicts how much electricity IIT Kharagpur's 5.5 MWp solar array will produce.
 
-- **Live weather injection** — Open-Meteo hourly data (19 variables) feeds directly into both ML models at prediction time, not from cache
-- **XGBoost daily forecast** — P10/P50/P90 quantile regression from 25 engineered weather features; gives conservative (P10), expected (P50), and optimistic (P90) daily generation estimates in kWh
-- **LSTM hourly profile** — 16-hour generation curve (04:00–19:00 IST) from 10 weather variables; shows hour-by-hour expected output
+- **Live weather injection** — Open-Meteo hourly data (10 variables: temp, cloud cover, radiation, humidity, precipitation) feeds directly into both ML models at prediction time, not from cache
+- **XGBoost daily forecast** — P10/P50/P90 quantile regression from 25 engineered weather features; gives conservative (P10), expected (P50), and optimistic (P90) daily generation estimates in kWh. **Feeds TES sizing and accuracy tracking.**
+- **LSTM hourly profile** — 16-hour generation curve (04:00–19:00 IST) from 13 features (10 weather + 3 temporal encodings); shows hour-by-hour expected output for visualization only
 - **Fallback chain** — When ML service is unavailable: cached DB data → weather-based sinusoidal curve estimation with cloud attenuation + PV temperature derating
-- **Accuracy tracking** — Trailing MAPE with predicted vs actual comparison across configurable day windows
+- **Accuracy tracking** — Trailing MAPE with predicted vs actual comparison across configurable day windows (XGBoost only)
 
 **How it works:**
 ```
 User clicks "Get Forecast" 
-  → Backend fetches live Open-Meteo weather for KGP (22.3149°N, 87.3105°E)
-  → Sends weather JSON to ML Service
-  → XGBoost P10/P50/P90 models predict daily totals
-  → LSTM model generates hourly profile
-  → Results saved to MongoDB, returned to frontend
-  → Frontend renders bar chart (daily) + line chart (hourly) + KPI cards
+  -> Backend fetches live Open-Meteo weather for KGP (22.3149N, 87.3105E)
+  -> Sends weather JSON to ML Service
+  -> XGBoost P10/P50/P90 models predict daily totals (feeds TES + accuracy)
+  -> LSTM model generates hourly profile (visualization only)
+  -> Results saved to MongoDB, returned to frontend
+  -> Frontend renders bar chart (daily) + line chart (hourly) + KPI cards
 ```
 
 ### 2. Ice Thermal Energy Storage (TES) Sizing
@@ -177,14 +181,13 @@ Reinforcement learning policy visualization for optimal energy trading decisions
 | Technology | Purpose |
 |------------|---------|
 | **FastAPI 0.115** | Async HTTP server with automatic OpenAPI docs |
-| **XGBoost 2.1** | Gradient-boosted quantile regression (P10/P50/P90 daily forecasts) |
-| **TensorFlow 2.17** | LSTM neural network for hourly generation profiles |
-| **scikit-learn 1.5** | Feature preprocessing, StandardScaler |
+| **XGBoost 2.1** | Quantile regression (P10/P50/P90 daily forecasts, 25 features) |
+| **TensorFlow 2.17** | LSTM seq2seq (96+64 units, 13 features, 16-hour profile) |
+| **scikit-learn 1.5** | Feature preprocessing, StandardScaler for LSTM |
 | **pandas / NumPy** | Data manipulation and feature engineering |
 | **sentence-transformers** | all-MiniLM-L6-v2 embeddings (384-dim) for RAG |
 | **PyMongo 4.8** | Direct MongoDB Atlas connection for vector search |
 | **Tavily Python** | Web search fallback for RAG queries |
-| **LangGraph** | Corrective-RAG state machine (grade → rewrite → retrieve → generate) |
 
 ### Database
 
