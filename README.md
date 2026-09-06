@@ -204,7 +204,6 @@ Reinforcement learning policy visualization for optimal energy trading decisions
 | **Open-Meteo** | Real-time + forecast weather data for KGP | Free (no API key) |
 | **DeepSeek v4 Flash** | LLM for RAG generation, grading, summarization | ~$1-3/month |
 | **Tavily** | Web search fallback for RAG | Free tier (1000 queries/month) |
-| **LangSmith** | LLM tracing and debugging | Free tier |
 
 ---
 
