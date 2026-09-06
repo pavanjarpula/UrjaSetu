@@ -129,17 +129,75 @@ Real-time monitoring view for the chiller plant and ice tanks (simulated data; O
 
 Full-page ChatGPT-style conversational interface for querying solar/energy documentation.
 
-- **Retrieval pipeline (6-stage):**
-  1. User query → local embeddings (all-MiniLM-L6-v2, 384-dim) via Python ML service
-  2. MongoDB Atlas Vector Search (cosine similarity, top-5 chunks)
-  3. Relevance grading via DeepSeek LLM (binary yes/no per chunk)
-  4. If < 2 relevant chunks → query rewrite via DeepSeek → re-retrieve
-  5. If still < 2 relevant chunks → Tavily web search fallback
-  6. Context + query → DeepSeek generate with source citations
-  7. Self-reflection: grades answer as useful/not_useful/hallucination; retries if needed
-- **Live data injection** — Fetches current forecast (P50) and TES (ice mass, coverage) from DB to enrich answers
-- **Session management** — MongoDB-backed chat sessions with full turn history
-- **Citation chips** — Source attribution from RAG documents and web search results
+```
+                         User Query
+                             |
+                             v
+                   +-------------------+
+                   | Embed Query       |
+                   | all-MiniLM-L6-v2  |
+                   | (384-dim vector)  |
+                   +-------------------+
+                             |
+                             v
+                   +-------------------+
+                   | Atlas Vector      |
+                   | Search (top-5)    |
+                   | cosine similarity |
+                   +-------------------+
+                             |
+                             v
+                   +-------------------+
+                   | Grade Relevance   |
+                   | DeepSeek LLM      |
+                   | (yes/no per chunk)|
+                   +-------------------+
+                             |
+                      < 2 relevant?
+                      /          \
+                    Yes           No
+                    |              |
+                    v              v
+          +---------------+   +-------------------+
+          | Rewrite Query |   | Fetch Live Data   |
+          | DeepSeek LLM  |   | (forecast + TES)  |
+          +---------------+   +-------------------+
+                    |              |
+                    v              v
+          +---------------+   +-------------------+
+          | Re-Retrieve   |   | Generate Answer   |
+          | (top-5 again) |   | DeepSeek LLM      |
+          +---------------+   | + citations       |
+                    |          +-------------------+
+                    v                   |
+          Still < 2 relevant?          v
+          /          \          +-------------------+
+        Yes           No        | Self-Reflect      |
+        |              |        | useful / not_useful|
+        v              |        | / hallucination    |
+  +-----------+        |        +-------------------+
+  | Tavily   |        |                  |
+  | Web      |        |          not_useful?
+  | Search   |        |          /       \
+  +-----------+        |        Yes        No
+        |              |        |          |
+        v              v        v          v
+        +----- Merge Context ------+   Return Answer
+                       |
+                       v
+              +-------------------+
+              | MongoDB Session   |
+              | (turn history)    |
+              +-------------------+
+```
+
+**Components:**
+- **Embeddings** — all-MiniLM-L6-v2 (384-dim) running locally via sentence-transformers, no external API cost
+- **Vector Search** — MongoDB Atlas `$vectorSearch` aggregation on `urjasetu_collection` with `vector_index`
+- **LLM** — DeepSeek v4 Flash for grading, rewriting, generation, and self-reflection
+- **Web Search** — Tavily API fallback when vector search returns insufficient relevant chunks
+- **Live Data** — Injects current forecast (P50 kWh) and TES (ice mass, coverage %) from DB into context
+- **Session Storage** — MongoDB `chatsessions` collection with full turn history per session
 
 ### 5. Solar Policy RL Dashboard
 
