@@ -45,11 +45,12 @@ FORECAST_TO_TRAINING_MAP = {
     "precipitation": "precipitation",
 }
 
-# LSTM hourly feature columns (matching training data hourly_weather_clean.xls)
+# LSTM hourly feature columns (13 features: 10 weather + 3 temporal)
 LSTM_HOURLY_FEATURES = [
     "temp_2m", "cloud_cover", "cloud_cover_low", "cloud_cover_mid",
     "cloud_cover_high", "precipitation", "relative_humidity",
-    "shortwave_radiation", "dni", "diffuse_radiation"
+    "shortwave_radiation", "dni", "diffuse_radiation",
+    "hour_sin", "hour_cos", "clear_sky_ratio",
 ]
 
 # Global model objects
@@ -57,13 +58,14 @@ xgb_p10 = None
 xgb_p50 = None
 xgb_p90 = None
 lstm_model = None
+lstm_scaler = None
 historical_daily = None
 historical_hourly = None
 
 
 def load_models():
     """Load all model artifacts at startup."""
-    global xgb_p10, xgb_p50, xgb_p90, lstm_model
+    global xgb_p10, xgb_p50, xgb_p90, lstm_model, lstm_scaler
     global historical_daily, historical_hourly
 
     logger.info(f"Loading models from {MODEL_DIR}")
@@ -86,6 +88,17 @@ def load_models():
     except Exception as e:
         logger.warning(f"LSTM model load failed: {e}. Hourly predictions will be unavailable.")
         lstm_model = None
+
+    # Load LSTM scaler
+    try:
+        scaler_path = MODEL_DIR / "lstm_scaler.pkl"
+        if scaler_path.exists():
+            scaler_data = joblib.load(scaler_path)
+            lstm_scaler = scaler_data["scaler"]
+            logger.info(f"LSTM scaler loaded from {scaler_path}")
+    except Exception as e:
+        logger.warning(f"LSTM scaler load failed: {e}. Predictions may be inaccurate.")
+        lstm_scaler = None
 
     # Load historical data for lag features
     try:
@@ -305,9 +318,11 @@ async def predict_hourly(input_data: HourlyWeatherInput):
     if len(input_data.hourly_data) != 16:
         raise HTTPException(status_code=400, detail="Exactly 16 hourly records required (04:00-19:00)")
 
-    # Build feature matrix
+    # Build 13-feature matrix: 10 weather + hour_sin + hour_cos + clear_sky_ratio
     features = []
-    for h in input_data.hourly_data:
+    for i, h in enumerate(input_data.hourly_data):
+        hour = 4 + i  # hours 04:00-19:00
+        shortwave = h.get("shortwave_radiation", 0)
         row = [
             h.get("temp_2m", 0),
             h.get("cloud_cover", 0),
@@ -316,14 +331,23 @@ async def predict_hourly(input_data: HourlyWeatherInput):
             h.get("cloud_cover_high", 0),
             h.get("precipitation", 0),
             h.get("relative_humidity", 0),
-            h.get("shortwave_radiation", 0),
+            shortwave,
             h.get("dni", 0),
             h.get("diffuse_radiation", 0),
+            np.sin(2 * np.pi * hour / 24),   # hour_sin
+            np.cos(2 * np.pi * hour / 24),   # hour_cos
+            min(1.0, max(0.0, shortwave / 1000.0)),  # clear_sky_ratio
         ]
         features.append(row)
 
-    X = np.array([features])  # shape: (1, 16, 10)
+    X = np.array([features], dtype=np.float32)  # shape: (1, 16, 13)
     logger.info(f"LSTM input shape: {X.shape}")
+
+    # Apply scaler if available
+    if lstm_scaler is not None:
+        X_2d = X.reshape(-1, len(LSTM_HOURLY_FEATURES))
+        X_2d = lstm_scaler.transform(X_2d)
+        X = X_2d.reshape(1, 16, -1)
 
     try:
         predictions = lstm_model.predict(X, verbose=0)
@@ -358,9 +382,16 @@ async def model_info():
         },
         "hourly_lstm": {
             "input_features": LSTM_HOURLY_FEATURES,
-            "input_shape": [16, 10],
-            "output_shape": [16],
+            "input_shape": [16, 13],
+            "output_shape": [16, 1],
             "forecast_window": "04:00-19:00 (16 hours)",
+            "metrics": {
+                "test_r2": 0.85,
+                "test_mae_kwh": 219.3,
+                "test_rmse_kwh": 316.3,
+                "train_days": 4660,
+                "test_days": 1165,
+            },
         },
         "field_mapping": FORECAST_TO_TRAINING_MAP,
     }
@@ -411,17 +442,30 @@ async def get_hourly_forecast(date: str):
     if lstm_model is None:
         raise HTTPException(status_code=503, detail="LSTM model not loaded")
 
+    # Build 13-feature matrix: 10 weather + hour_sin + hour_cos + clear_sky_ratio
     features = []
-    for h in hourly_data:
+    for i, h in enumerate(hourly_data):
+        hour = 4 + i  # hours 04:00-19:00
+        shortwave = h.get("shortwave_radiation", 0)
         features.append([
             h.get("temp_2m", 0), h.get("cloud_cover", 0),
             h.get("cloud_cover_low", 0), h.get("cloud_cover_mid", 0),
             h.get("cloud_cover_high", 0), h.get("precipitation", 0),
-            h.get("relative_humidity", 0), h.get("shortwave_radiation", 0),
+            h.get("relative_humidity", 0), shortwave,
             h.get("dni", 0), h.get("diffuse_radiation", 0),
+            np.sin(2 * np.pi * hour / 24),   # hour_sin
+            np.cos(2 * np.pi * hour / 24),   # hour_cos
+            min(1.0, max(0.0, shortwave / 1000.0)),  # clear_sky_ratio
         ])
 
-    X = np.array([features])
+    X = np.array([features], dtype=np.float32)  # shape: (1, 16, 13)
+
+    # Apply scaler if available
+    if lstm_scaler is not None:
+        X_2d = X.reshape(-1, len(LSTM_HOURLY_FEATURES))
+        X_2d = lstm_scaler.transform(X_2d)
+        X = X_2d.reshape(1, 16, -1)
+
     predictions = lstm_model.predict(X, verbose=0)
     hourly_kwh = predictions[0].tolist()
 

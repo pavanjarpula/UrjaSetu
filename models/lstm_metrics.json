@@ -1,0 +1,42 @@
+{
+  "features": [
+    "temp_2m",
+    "cloud_cover",
+    "cloud_cover_low",
+    "cloud_cover_mid",
+    "cloud_cover_high",
+    "precipitation",
+    "relative_humidity",
+    "shortwave_radiation",
+    "dni",
+    "diffuse_radiation",
+    "hour_sin",
+    "hour_cos",
+    "clear_sky_ratio"
+  ],
+  "n_features": 13,
+  "sequence_length": 16,
+  "train_days": 4660,
+  "test_days": 1165,
+  "train_metrics": {
+    "mae": 284.0184020996094,
+    "rmse": 427.7342559931341,
+    "r2": 0.8004775047302246,
+    "mape": 74.4738757610321
+  },
+  "test_metrics": {
+    "mae": 219.341064453125,
+    "rmse": 316.25786798513013,
+    "r2": 0.8495197892189026,
+    "mape": 53.999531269073486
+  },
+  "architecture": {
+    "lstm_1_units": 96,
+    "lstm_2_units": 64,
+    "dropout": 0.1,
+    "dense_units": 8,
+    "optimizer": "adam",
+    "learning_rate": 0.005,
+    "loss": "mse"
+  }
+}

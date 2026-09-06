@@ -1,0 +1,15 @@
+[
+  "temp_2m",
+  "cloud_cover",
+  "cloud_cover_low",
+  "cloud_cover_mid",
+  "cloud_cover_high",
+  "precipitation",
+  "relative_humidity",
+  "shortwave_radiation",
+  "dni",
+  "diffuse_radiation",
+  "hour_sin",
+  "hour_cos",
+  "clear_sky_ratio"
+]
