@@ -1,8 +1,7 @@
 """
-LangGraph Corrective-RAG State Machine
+Corrective-RAG Pipeline
 Implements the full RAG pipeline with:
-- LangGraph state machine for retrieval → grade → rewrite → generate → self-reflect
-- LangSmith tracing for observability
+- Retrieval → grade → rewrite → generate → self-reflect
 - Tavily web search fallback
 - MongoDB Atlas Vector Search integration
 """

@@ -50,8 +50,6 @@
    DEEPSEEK_MODEL = deepseek-chat
    LLM_PROVIDER = deepseek
    TAVILY_API_KEY = <your_tavily_api_key>
-   LANGCHAIN_API_KEY = <your_langchain_api_key>
-   LANGCHAIN_TRACING_V2 = true
    ML_SERVICE_URL = https://urjasetu-ml-service.onrender.com
    CLIENT_URL = https://urjasetu.vercel.app
    ```

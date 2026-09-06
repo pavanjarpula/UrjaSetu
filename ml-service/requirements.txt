@@ -12,9 +12,5 @@ pymongo==4.8.0
 sentence-transformers==3.1.0
 PyMuPDF==1.24.5
 requests==2.32.3
-# LangGraph for corrective-RAG state machine
-langgraph==0.4.1
-# LangSmith for RAG tracing
-langsmith==0.3.4
 # Tavily for web search fallback
 tavily-python==0.5.0
