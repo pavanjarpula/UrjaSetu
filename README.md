@@ -75,7 +75,68 @@
 └──────────────────┘ └─────────────────┘ └──────────────────────────┘
 ```
 
-**Security principle:** React never calls third-party APIs directly. All API keys (DeepSeek, Tavily, LangSmith) live exclusively in backend environment variables.
+**Security principle:** React never calls third-party APIs directly. All API keys (DeepSeek, Tavily) live exclusively in backend environment variables.
+
+---
+
+## ML Models
+
+Two models serve different purposes in the forecasting pipeline:
+
+### XGBoost — Daily Total Forecast
+
+| Attribute | Detail |
+|-----------|--------|
+| **What it predicts** | 1 number: total daily generation (kWh) |
+| **Algorithm** | XGBoost quantile regression (P10/P50/P90) |
+| **Features** | 25 engineered (9 weather + 7 temporal + 3 lag + 6 rolling) |
+| **Training data** | 730 days (2023–2024) |
+| **Test data** | 365 days (2025) |
+| **Test MAPE** | 16.1% |
+| **Test R²** | 0.71 |
+| **Test MAE** | 1,858 kWh |
+| **Test RMSE** | 2,486 kWh |
+| **vs Baseline** | 31.2% improvement over persistence (23.4% MAPE) |
+| **Uncertainty** | P10/P90 gives 80% prediction interval (avg width 6,613 kWh) |
+| **Feeds** | TES sizing, accuracy tracking, KPI cards, forecast bar chart |
+
+### LSTM — Hourly Generation Profile
+
+| Attribute | Detail |
+|-----------|--------|
+| **What it predicts** | 16 numbers: kWh for each hour (04:00–19:00 IST) |
+| **Algorithm** | LSTM seq2seq (96 + 64 units, dropout 0.1) |
+| **Features** | 13 (10 weather + hour_sin + hour_cos + clear_sky_ratio) |
+| **Training data** | 365 days (2025 campus SCADA data) |
+| **Test data** | 73 days (last 20% of 2025) |
+| **Test R²** | 0.85 |
+| **Test MAE** | 219 kWh (~11% of peak generation) |
+| **Test RMSE** | 316 kWh |
+| **Uncertainty** | None — single point prediction per hour |
+| **Feeds** | Hourly generation chart only (visualization) |
+
+### What Shows Where on the Application
+
+```
+Solar Forecast Dashboard:
+  +------------------------------------------+
+  |  KPI Cards                                |
+  |  [P10: 11,607] [P50: 15,165] [P90: 18,220]  <- XGBoost
+  +------------------------------------------+
+  |  Daily Forecast Bar Chart                 |
+  |  [||||||||||||||] 15,165 kWh              <- XGBoost P50
+  +------------------------------------------+
+  |  Hourly Profile Area Chart                |
+  |  [~~~~~~/¯¯¯¯¯¯\~~~~~~]                  <- LSTM (16 values)
+  +------------------------------------------+
+
+Ice TES Dashboard:
+  +------------------------------------------+
+  |  Ice Mass: XX,XXX kg                      <- Computed from XGBoost P50
+  |  Coverage: XX.X%                          <- Computed from XGBoost P50
+  |  Per-hall discharge table (21 halls)      <- Dynamic from forecast
+  +------------------------------------------+
+```
 
 ---
 
@@ -267,32 +328,34 @@ Reinforcement learning policy visualization for optimal energy trading decisions
 
 ## IIT Kharagpur Halls of Residence
 
-21 named halls with tier-based ice allocation:
+21 named halls with **dynamic** tier-based ice allocation computed per-day from XGBoost P50 forecast:
 
-| Tier | Hall Name | Rooms | Ice Allocation (kg) | Discharge (kWh) |
-|------|-----------|-------|--------------------:|----------------:|
-| **Large** | B R Ambedkar Hall | 1,392 | 41,281 | 3,330 |
-| **Large** | Lalbahadur Sastry Hall | 1,300 | 38,550 | 3,110 |
-| **Large** | Madan Mohan Malviya Hall | 1,180 | 35,010 | 2,823 |
-| **Large** | Patel Hall | 1,050 | 31,163 | 2,512 |
-| **Large** | Lala Lajpat Rai Hall | 900 | 26,711 | 2,153 |
-| **Medium** | Azad Hall | 590 | 17,481 | 1,412 |
-| **Medium** | JC Bose Hall | 520 | 15,402 | 1,244 |
-| **Medium** | Nehru Hall | 490 | 14,513 | 1,172 |
-| **Medium** | Rajendra Prasad Hall | 460 | 13,624 | 1,101 |
-| **Medium** | Vidyasagar Hall | 440 | 13,032 | 1,053 |
-| **Medium** | Megnad Saha Hall | 420 | 12,441 | 1,005 |
-| **Medium** | BC Roy Hall | 400 | 11,848 | 957 |
-| **Medium** | Radha Krishnan Hall | 380 | 11,256 | 909 |
-| **Small** | Homi Bhabha Hall | 330 | 9,774 | 790 |
-| **Small** | Sir Ashutosh Mukherjee Hall | 300 | 8,885 | 718 |
-| **Small** | Gokhale Hall | 260 | 7,699 | 622 |
-| **Small** | Sarojini Naidu Hall | 250 | 7,403 | 598 |
-| **Small** | Mother Teresa Hall | 240 | 7,107 | 574 |
-| **Small** | Zakir Hussain Hall | 220 | 6,516 | 526 |
-| **Small** | Rani Laxmibai Hall | 200 | 5,924 | 479 |
-| **Small** | Sister Nivedita Hall | 183 | 5,422 | 438 |
-| | **Total** | **11,888** | **351,522** | **28,362** |
+| Tier | Hall Name | Rooms |
+|------|-----------|------:|
+| **Large** | B R Ambedkar Hall | 1,392 |
+| **Large** | Lalbahadur Sastry Hall | 1,300 |
+| **Large** | Madan Mohan Malviya Hall | 1,180 |
+| **Large** | Patel Hall | 1,050 |
+| **Large** | Lala Lajpat Rai Hall | 900 |
+| **Medium** | Azad Hall | 590 |
+| **Medium** | JC Bose Hall | 520 |
+| **Medium** | Nehru Hall | 490 |
+| **Medium** | Rajendra Prasad Hall | 460 |
+| **Medium** | Vidyasagar Hall | 440 |
+| **Medium** | Megnad Saha Hall | 420 |
+| **Medium** | BC Roy Hall | 400 |
+| **Medium** | Radha Krishnan Hall | 380 |
+| **Small** | Homi Bhabha Hall | 330 |
+| **Small** | Sir Ashutosh Mukherjee Hall | 300 |
+| **Small** | Gokhale Hall | 260 |
+| **Small** | Sarojini Naidu Hall | 250 |
+| **Small** | Mother Teresa Hall | 240 |
+| **Small** | Zakir Hussain Hall | 220 |
+| **Small** | Rani Laxmibai Hall | 200 |
+| **Small** | Sister Nivedita Hall | 183 |
+| | **Total** | **11,888** |
+
+> Ice mass (kg) and discharge (kWh) per hall are **computed dynamically** based on the day's XGBoost P50 forecast, weather conditions, and COP calculation — they change every day.
 
 ---
 
