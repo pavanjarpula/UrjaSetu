@@ -129,17 +129,17 @@ Real-time monitoring view for the chiller plant and ice tanks (simulated data; O
 
 Full-page ChatGPT-style conversational interface for querying solar/energy documentation.
 
-- **Retrieval pipeline:**
-  1. User query → local embeddings (all-MiniLM-L6-v2, 384-dim)
+- **Retrieval pipeline (6-stage):**
+  1. User query → local embeddings (all-MiniLM-L6-v2, 384-dim) via Python ML service
   2. MongoDB Atlas Vector Search (cosine similarity, top-5 chunks)
-  3. Relevance grading via DeepSeek LLM
-  4. If relevance < threshold → query rewrite → re-retrieve
-  5. If still no match → Tavily web search fallback
-  6. Context + query → DeepSeek generate with citations
-  7. Self-reflection: checks if answer is supported by retrieved context
-- **Session management** — localStorage with max 20 conversations, sidebar with history
-- **Citation chips** — Source attribution from RAG documents
-- **Conversation history** — Full context window sent to backend for multi-turn dialogue
+  3. Relevance grading via DeepSeek LLM (binary yes/no per chunk)
+  4. If < 2 relevant chunks → query rewrite via DeepSeek → re-retrieve
+  5. If still < 2 relevant chunks → Tavily web search fallback
+  6. Context + query → DeepSeek generate with source citations
+  7. Self-reflection: grades answer as useful/not_useful/hallucination; retries if needed
+- **Live data injection** — Fetches current forecast (P50) and TES (ice mass, coverage) from DB to enrich answers
+- **Session management** — MongoDB-backed chat sessions with full turn history
+- **Citation chips** — Source attribution from RAG documents and web search results
 
 ### 5. Solar Policy RL Dashboard
 
