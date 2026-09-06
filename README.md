@@ -539,24 +539,6 @@ The UI follows a **ChatGPT-inspired dark theme** with custom CSS design tokens:
 
 ---
 
-## Cost Estimate
-
-| Service | Tier | Monthly Cost |
-|---------|------|-------------|
-| MongoDB Atlas M0 | Free | $0 |
-| DeepSeek API | Pay-per-use | ~$1-3 |
-| Open-Meteo API | Free (no key) | $0 |
-| Local embeddings (MiniLM-L6) | Free | $0 |
-| Vercel (frontend) | Hobby | $0 |
-| Render (backend) | Free | $0 |
-| Render (ML service) | Free | $0 |
-| Tavily (web search) | Free tier | $0 |
-| **Total** | | **$1-3/month** |
-
-> Render free tier services spin down after 15 min of inactivity. First request after idle takes ~30s to wake up.
-
----
-
 ## License
 
 BTP Project — IIT Kharagpur
