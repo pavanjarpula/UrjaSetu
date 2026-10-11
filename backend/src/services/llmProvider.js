@@ -10,15 +10,40 @@ const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepsee
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Comma-separated list, tried in order (first = primary, rest = fallbacks)
+const GEMINI_MODELS = (process.env.GEMINI_MODEL || "gemini-3.8-flash")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
 const PROVIDER = process.env.LLM_PROVIDER || "deepseek";
 
 // Gemini setup (fallback)
-let genAI, geminiModel;
+let genAI;
+let geminiModels = [];
 if (PROVIDER === "gemini" && GEMINI_API_KEY) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  geminiModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+  geminiModels = GEMINI_MODELS.map((m) => genAI.getGenerativeModel({ model: m }));
+}
+
+// Try each configured Gemini model in order, retrying transient (5xx/429) errors
+async function geminiGenerate(prompt) {
+  let lastErr;
+  for (const model of geminiModels) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await model.generateContent([{ text: prompt }]);
+        return result.response.text();
+      } catch (err) {
+        lastErr = err;
+        const msg = (err && err.message) || "";
+        const transient = /50\d|429|overloaded|high demand|service unavailable|timeout/i.test(msg);
+        if (!transient) throw err;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // ─────────────── DeepSeek (OpenAI-compatible) ───────────────
@@ -76,12 +101,11 @@ Keep answers concise, factual, and professional.`;
     }
   }
 
-  if (PROVIDER === "gemini" && geminiModel) {
+  if (PROVIDER === "gemini" && geminiModels.length > 0) {
     try {
-      const result = await geminiModel.generateContent([
-        { text: systemPrompt + "\n\n" + `Context:\n${context}\n\nQuestion: ${question}\n\nAnswer:` },
-      ]);
-      return result.response.text();
+      return await geminiGenerate(
+        systemPrompt + "\n\n" + `Context:\n${context}\n\nQuestion: ${question}\n\nAnswer:`
+      );
     } catch (err) {
       console.error("Gemini API error:", err.message);
       return fallbackAnswer(question, err.message);
@@ -104,10 +128,9 @@ async function gradeRelevance(question, chunkText) {
     }
   }
 
-  if (PROVIDER === "gemini" && geminiModel) {
+  if (PROVIDER === "gemini" && geminiModels.length > 0) {
     try {
-      const result = await geminiModel.generateContent([{ text: prompt }]);
-      const text = result.response.text().trim().toLowerCase();
+      const text = (await geminiGenerate(prompt)).trim().toLowerCase();
       return text.startsWith("yes");
     } catch (err) {
       console.error("Gemini grading error:", err.message);
@@ -131,10 +154,9 @@ async function rewriteQuery(originalQuestion) {
     }
   }
 
-  if (PROVIDER === "gemini" && geminiModel) {
+  if (PROVIDER === "gemini" && geminiModels.length > 0) {
     try {
-      const result = await geminiModel.generateContent([{ text: prompt }]);
-      return result.response.text().trim();
+      return (await geminiGenerate(prompt)).trim();
     } catch (err) {
       console.error("Gemini rewrite error:", err.message);
       return originalQuestion;
