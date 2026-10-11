@@ -10,6 +10,7 @@ const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepsee
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const PROVIDER = process.env.LLM_PROVIDER || "deepseek";
 
 // Gemini setup (fallback)
@@ -17,7 +18,7 @@ let genAI, geminiModel;
 if (PROVIDER === "gemini" && GEMINI_API_KEY) {
   const { GoogleGenerativeAI } = require("@google/generative-ai");
   genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  geminiModel = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 }
 
 // ─────────────── DeepSeek (OpenAI-compatible) ───────────────
