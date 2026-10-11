@@ -14,7 +14,7 @@ services:
       - key: LLM_PROVIDER
         value: deepseek
       - key: DEEPSEEK_API_KEY
-        value: "sk-88bd9337a191402d8f9bdb564bb9c17a"
+        sync: false
       - key: DEEPSEEK_MODEL
         value: deepseek-chat
       - key: ML_SERVICE_URL

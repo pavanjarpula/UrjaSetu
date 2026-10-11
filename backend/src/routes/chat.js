@@ -10,6 +10,7 @@ const axios = require("axios");
 
 const router = express.Router();
 const ML_SERVICE = process.env.ML_SERVICE_URL || "http://localhost:8001";
+const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1").replace(/\/$/, "");
 
 // Embed query via Python ML service (sentence-transformers)
 async function embedQuery(text) {
@@ -190,7 +191,7 @@ async function runCorrectiveRAG(message, sid, history = []) {
     const reflectPrompt = `You are grading whether the answer is USEFUL (directly answers) and GROUNDED (supported by context).\n\nQuestion: ${message}\nAnswer: ${answer.substring(0, 1500)}\n\nReply: "useful", "not_useful", or "hallucination".`;
 
     try {
-      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

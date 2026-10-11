@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 5000;
 const ML_SERVICE = process.env.ML_SERVICE_URL || "http://localhost:8001";
 
 // Middleware
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
 app.use(morgan("combined"));

@@ -6,7 +6,7 @@
  */
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
+const DEEPSEEK_BASE_URL = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1").replace(/\/$/, "");
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -71,7 +71,7 @@ Keep answers concise, factual, and professional.`;
       return await deepseekChat(messages);
     } catch (err) {
       console.error("DeepSeek API error:", err.message);
-      return fallbackAnswer(question);
+      return fallbackAnswer(question, err.message);
     }
   }
 
@@ -83,7 +83,7 @@ Keep answers concise, factual, and professional.`;
       return result.response.text();
     } catch (err) {
       console.error("Gemini API error:", err.message);
-      return fallbackAnswer(question);
+      return fallbackAnswer(question, err.message);
     }
   }
 
@@ -143,9 +143,12 @@ async function rewriteQuery(originalQuestion) {
   return originalQuestion;
 }
 
-// Fallbacks when no API key is configured
-function fallbackAnswer(question) {
-  return `[Local fallback] Configure DEEPSEEK_API_KEY in .env for full LLM functionality. Question received: "${question}"`;
+// Fallbacks when no API key is configured, or the configured provider call failed
+function fallbackAnswer(question, reason) {
+  const detail = reason
+    ? ` LLM request failed: ${reason}`
+    : ` Reason: ${PROVIDER.toUpperCase()}_API_KEY is not set (LLM_PROVIDER=${PROVIDER}).`;
+  return `[Local fallback] LLM unavailable.${detail} Question received: "${question}"`;
 }
 
 function fallbackGrade(question, chunkText) {

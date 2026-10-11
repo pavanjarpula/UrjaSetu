@@ -25,7 +25,6 @@ const chatSessionSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now },
 });
 
-chatSessionSchema.index({ session_id: 1 });
 chatSessionSchema.index({ user_id: 1 });
 
 module.exports = mongoose.model("ChatSession", chatSessionSchema);
